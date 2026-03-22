@@ -1,109 +1,145 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
+import { Plus, Building2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { BetsTable } from "@/components/BetsTable";
-import { Leaderboard } from "@/components/Leaderboard";
+import { CreateDAOModal } from "@/components/CreateDAOModal";
+import { useDaos } from "@/lib/hooks/useTreasuryPilot";
 
 export default function HomePage() {
+  const [showCreate, setShowCreate] = useState(false);
+  const { data: daos = [], isLoading, refetch } = useDaos();
+
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navbar */}
       <Navbar />
 
-      {/* Main Content - Padding to account for fixed navbar */}
-      <main className="flex-grow pt-20 pb-12 px-4 md:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Hero Section */}
-          <div className="text-center mb-8 animate-fade-in">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-              Football Prediction Betting
+      <main className="flex-grow pt-20 pb-16 px-4 md:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+
+          {/* Institution header */}
+          <div className="text-center py-16 animate-fade-in">
+            <div className="inline-flex items-center gap-2 text-xs font-mono text-slate-600 uppercase tracking-[0.25em] mb-6">
+              <span className="w-8 h-px bg-slate-700" />
+              GenLayer · Bradbury Testnet
+              <span className="w-8 h-px bg-slate-700" />
+            </div>
+            <h1 className="font-display text-5xl md:text-6xl text-slate-100 mb-4">
+              TreasuryPilot
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              AI-powered football match predictions on GenLayer blockchain.
-              <br />
-              Create bets, make predictions, and compete for points.
+            <p className="text-slate-500 text-sm font-body max-w-lg mx-auto leading-relaxed">
+              AI-powered treasury governance. Submit proposals, watch validators deliberate,
+              receive impartial verdicts scored against your DAO&apos;s own constitution.
             </p>
           </div>
 
-          {/* Main Grid Layout - 2/1 columns on desktop, stacked on mobile */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-            {/* Left Column - Bets Table (67% on desktop) */}
-            <div className="lg:col-span-8 animate-slide-up">
-              <BetsTable />
+          {/* DAO Registry */}
+          <div className="space-y-4 animate-slide-up" style={{ animationDelay: "150ms" }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xs font-mono uppercase tracking-[0.2em] text-slate-500">
+                  DAO Registry
+                </h2>
+                <span className="font-mono text-xs text-slate-700 border border-slate-800 px-2 py-0.5">
+                  {daos.length}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="flex items-center gap-2 px-4 py-2 text-xs font-mono uppercase tracking-widest text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/10 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Register DAO
+              </button>
             </div>
 
-            {/* Right Column - Leaderboard (33% on desktop) */}
-            <div className="lg:col-span-4 animate-slide-up" style={{ animationDelay: "100ms" }}>
-              <Leaderboard />
+            {isLoading ? (
+              <div className="gov-card p-10 flex items-center justify-center">
+                <span className="font-mono text-sm text-slate-600 tracking-wider">Loading registry...</span>
+              </div>
+            ) : daos.length === 0 ? (
+              <div className="gov-card p-16 flex flex-col items-center gap-5 text-center">
+                <Building2 className="w-10 h-10 text-slate-800" />
+                <div>
+                  <p className="text-slate-400 font-body font-medium mb-1">No DAOs registered</p>
+                  <p className="text-xs text-slate-700 font-mono">The registry is empty. Be the first to register your DAO.</p>
+                </div>
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="px-6 py-2.5 text-xs font-mono uppercase tracking-widest text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/10 transition-colors"
+                >
+                  Register First DAO
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {daos.map((dao, i) => (
+                  <Link
+                    key={dao.id}
+                    href={`/dao/${dao.id}`}
+                    className="gov-card gov-card-hover p-6 block animate-fade-in group"
+                    style={{ animationDelay: `${i * 80}ms` }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-display text-lg text-slate-100 group-hover:text-cyan-400 transition-colors truncate">
+                          {dao.name}
+                        </h3>
+                        <p className="text-xs text-slate-600 font-mono mt-1 truncate">
+                          {dao.admin}
+                        </p>
+                      </div>
+                      <span className="font-mono text-xs text-slate-600 border border-slate-800 px-2 py-1 shrink-0">
+                        {dao.proposal_count} proposals
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-3 line-clamp-2 leading-relaxed">
+                      {dao.constitution.slice(0, 160)}...
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* How it works */}
+          <div className="gov-card mt-12 p-8 animate-fade-in" style={{ animationDelay: "300ms" }}>
+            <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-slate-600 mb-6">How It Works</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {[
+                { n: "01", title: "Register DAO", body: "Publish your mission, councils, budgets, and allocation rules on-chain." },
+                { n: "02", title: "Submit Proposal", body: "Anyone submits a funding request targeting a specific council." },
+                { n: "03", title: "AI Evaluates", body: "Multiple validators run the same LLM evaluation and must reach consensus." },
+                { n: "04", title: "Verdict Issued", body: "The proposal receives a binding score, risk rating, and recommendation." },
+              ].map((step) => (
+                <div key={step.n} className="space-y-2">
+                  <div className="font-mono text-2xl text-slate-800">{step.n}</div>
+                  <div className="text-sm font-body font-medium text-slate-300">{step.title}</div>
+                  <p className="text-xs text-slate-600 leading-relaxed">{step.body}</p>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Info Section */}
-          <div className="mt-8 glass-card p-6 md:p-8 animate-fade-in" style={{ animationDelay: "200ms" }}>
-            <h2 className="text-2xl font-bold mb-4">How it Works</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <div className="text-accent font-bold text-lg">1. Create a Bet</div>
-                <p className="text-sm text-muted-foreground">
-                  Connect your wallet and create a football match prediction. Choose the teams, date, and your predicted winner.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="text-accent font-bold text-lg">2. Wait for Resolution</div>
-                <p className="text-sm text-muted-foreground">
-                  After the match, the bet creator resolves the bet. GenLayer's AI verifies the actual match result.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="text-accent font-bold text-lg">3. Earn Points</div>
-                <p className="text-sm text-muted-foreground">
-                  Correct predictions earn you points. Climb the leaderboard and prove your football knowledge!
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-2">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-          <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
-              <a
-                href="https://genlayer.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-accent transition-colors"
-              >
-                Powered by GenLayer
-              </a>
-              <a
-                href="https://studio.genlayer.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-accent transition-colors"
-              >
-                Studio
-              </a>
-              <a
-                href="https://docs.genlayer.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-accent transition-colors"
-              >
-                Docs
-              </a>
-              <a
-                href="https://github.com/genlayerlabs/genlayer-project-boilerplate"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-accent transition-colors"
-              >
-                GitHub
-              </a>
-          </div>
+      <footer className="border-t border-slate-900 py-4 px-6">
+        <div className="max-w-5xl mx-auto flex items-center justify-between text-xs font-mono text-slate-700">
+          <span>TreasuryPilot · Built on GenLayer</span>
+          <a href="https://docs.genlayer.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-500 transition-colors">
+            docs.genlayer.com
+          </a>
         </div>
       </footer>
+
+      {showCreate && (
+        <CreateDAOModal
+          onClose={() => setShowCreate(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
     </div>
   );
 }
