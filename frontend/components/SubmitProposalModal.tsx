@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, ExternalLink } from "lucide-react";
 import { useSubmitProposal } from "@/lib/hooks/useTreasuryPilot";
 import { useWallet } from "@/lib/genlayer/wallet";
 import type { Council } from "@/lib/contracts/types";
@@ -17,6 +17,7 @@ const EMPTY = { title: "", description: "", requestedAmount: "", recipient: "", 
 
 export function SubmitProposalModal({ daoId, councils, onClose, onSuccess }: SubmitProposalModalProps) {
   const [form, setForm] = useState(EMPTY);
+  const [txHash, setTxHash] = useState<string | null>(null);
   const { mutateAsync, isPending } = useSubmitProposal();
   const { address, isConnected } = useWallet();
 
@@ -34,6 +35,7 @@ export function SubmitProposalModal({ daoId, councils, onClose, onSuccess }: Sub
         recipient: form.recipient || address || "",
         targetCouncil: form.targetCouncil,
         rationale: form.rationale,
+        onSubmitted: (hash) => setTxHash(hash),
       });
       onSuccess?.();
       onClose();
@@ -138,6 +140,28 @@ export function SubmitProposalModal({ daoId, councils, onClose, onSuccess }: Sub
               required
             />
           </div>
+
+          {txHash && (
+            <div className="rounded border border-cyan-500/20 bg-cyan-950/20 p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="text-xs font-mono uppercase tracking-widest text-cyan-400">AI Validators Deliberating</span>
+              </div>
+              <p className="text-xs text-slate-400">Consensus takes 5–15 minutes. You can close this modal — your proposal will appear once validators agree.</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-slate-600 font-mono">Tx:</span>
+                <span className="text-xs font-mono text-slate-400 truncate">{txHash}</span>
+                <a
+                  href={`https://explorer-bradbury.genlayer.com/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto text-slate-600 hover:text-cyan-400 transition-colors shrink-0"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="flex gap-3 pt-2 border-t border-slate-800">

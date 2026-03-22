@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import TreasuryPilot from "../contracts/TreasuryPilot";
-import { getContractAddress, getStudioUrl } from "../genlayer/client";
+import { getContractAddress } from "../genlayer/client";
 import { useWallet } from "../genlayer/wallet";
 import { success, error } from "../utils/toast";
 import type { DAO, Proposal } from "../contracts/types";
@@ -11,12 +11,11 @@ import type { DAO, Proposal } from "../contracts/types";
 export function useTreasuryContract(): TreasuryPilot | null {
   const { address } = useWallet();
   const contractAddress = getContractAddress();
-  const rpcUrl = getStudioUrl();
 
   return useMemo(() => {
     if (!contractAddress) return null;
-    return new TreasuryPilot(contractAddress, address, rpcUrl);
-  }, [contractAddress, address, rpcUrl]);
+    return new TreasuryPilot(contractAddress, address);
+  }, [contractAddress, address]);
 }
 
 export function useDaos() {
@@ -70,10 +69,10 @@ export function useCreateDao() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ name, constitution }: { name: string; constitution: string }) => {
+    mutationFn: async ({ name, constitution, onSubmitted }: { name: string; constitution: string; onSubmitted?: (txHash: string) => void }) => {
       if (!contract) throw new Error("Contract not configured");
       if (!address) throw new Error("Wallet not connected");
-      return contract.createDao(name, constitution);
+      return contract.createDao(name, constitution, onSubmitted);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["daos"] });
@@ -99,6 +98,7 @@ export function useSubmitProposal() {
       recipient,
       targetCouncil,
       rationale,
+      onSubmitted,
     }: {
       daoId: number;
       title: string;
@@ -107,10 +107,11 @@ export function useSubmitProposal() {
       recipient: string;
       targetCouncil: string;
       rationale: string;
+      onSubmitted?: (txHash: string) => void;
     }) => {
       if (!contract) throw new Error("Contract not configured");
       if (!address) throw new Error("Wallet not connected");
-      return contract.submitProposal(daoId, title, description, requestedAmount, recipient, targetCouncil, rationale);
+      return contract.submitProposal(daoId, title, description, requestedAmount, recipient, targetCouncil, rationale, onSubmitted);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["proposals", variables.daoId] });

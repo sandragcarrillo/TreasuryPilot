@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "genlayer-js";
-import { testnetAsimov } from "genlayer-js/chains";
+import { testnetBradbury } from "genlayer-js/chains";
 import { createWalletClient, custom, type WalletClient } from "viem";
 
 // GenLayer Network Configuration (from environment variables with fallbacks)
@@ -16,8 +16,8 @@ export const GENLAYER_NETWORK = {
     symbol: process.env.NEXT_PUBLIC_GENLAYER_SYMBOL || "GEN",
     decimals: 18,
   },
-  rpcUrls: [process.env.NEXT_PUBLIC_GENLAYER_RPC_URL || "https://studio.genlayer.com/api"],
-  blockExplorerUrls: [],
+  rpcUrls: [process.env.NEXT_PUBLIC_GENLAYER_RPC_URL || "https://rpc-bradbury.genlayer.com"],
+  blockExplorerUrls: ["https://explorer-bradbury.genlayer.com/"],
 };
 
 // Ethereum provider type from window
@@ -219,13 +219,6 @@ export async function connectMetaMask(): Promise<string> {
     throw new Error("No accounts found");
   }
 
-  // Check and switch to GenLayer network
-  const onCorrectNetwork = await isOnGenLayerNetwork();
-
-  if (!onCorrectNetwork) {
-    await switchToGenLayerNetwork();
-  }
-
   return accounts[0];
 }
 
@@ -281,7 +274,7 @@ export function createMetaMaskWalletClient(): WalletClient | null {
 
   try {
     return createWalletClient({
-      chain: testnetAsimov as any,
+      chain: testnetBradbury as any,
       transport: custom(provider),
     });
   } catch (error) {
@@ -299,7 +292,7 @@ export function createMetaMaskWalletClient(): WalletClient | null {
  */
 export function createGenLayerClient(address?: string) {
   const config: any = {
-    chain: testnetAsimov,
+    chain: testnetBradbury,
   };
 
   if (address) {
@@ -312,7 +305,7 @@ export function createGenLayerClient(address?: string) {
     console.error("Error creating GenLayer client:", error);
     // Return client without account on error
     return createClient({
-      chain: testnetAsimov,
+      chain: testnetBradbury,
     });
   }
 }
