@@ -9,8 +9,9 @@ import {
 } from "genlayer-js/types";
 import { localnet } from "genlayer-js/chains";
 
+
 export default async function main(client: GenLayerClient<any>) {
-  const filePath = path.resolve(process.cwd(), "contracts/football_bets.py");
+  const filePath = path.resolve(process.cwd(), "contracts/treasury_pilot.py");
 
   try {
     const contractCode = new Uint8Array(readFileSync(filePath));
