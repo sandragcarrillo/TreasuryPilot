@@ -1,20 +1,15 @@
 # TreasuryPilot Frontend
 
+**Live: [treasury-pilot-frontend.vercel.app](https://treasury-pilot-frontend.vercel.app)**
+
 Next.js frontend for TreasuryPilot — AI-powered DAO treasury governance on GenLayer's Bradbury Testnet.
 
-## Setup
+## Running locally
 
-1. Install dependencies:
+1. Install dependencies: `bun install` or `npm install`
+2. Create `.env`:
 
-```bash
-bun install
-# or
-npm install
 ```
-
-2. Create `.env` file and configure environment variables:
-
-```bash
 NEXT_PUBLIC_GENLAYER_RPC_URL=https://rpc-bradbury.genlayer.com
 NEXT_PUBLIC_GENLAYER_CHAIN_ID=61999
 NEXT_PUBLIC_GENLAYER_CHAIN_NAME=Genlayer Bradbury Testnet
@@ -22,29 +17,7 @@ NEXT_PUBLIC_GENLAYER_SYMBOL=GEN
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x8E09e2d21ba7bfb9A3c15E3AD9f5Ab48Ea6050Dc
 ```
 
-## Development
-
-```bash
-bun dev
-# or
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Build
-
-```bash
-bun run build && bun start
-# or
-npm run build && npm start
-```
-
-## Deploy to Vercel
-
-1. Import the repo in Vercel and set the **Root Directory** to `frontend/`
-2. Add the environment variables above in the Vercel dashboard
-3. Deploy — no other configuration needed
+3. `bun dev` or `npm run dev` → [http://localhost:3000](http://localhost:3000)
 
 ## Tech Stack
 
