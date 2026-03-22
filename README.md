@@ -3,6 +3,7 @@
 
 **Live app: [treasury-pilot-frontend.vercel.app](https://treasury-pilot-frontend.vercel.app)**
 **Contract: [`0x8E09e2d21ba7bfb9A3c15E3AD9f5Ab48Ea6050Dc`](https://explorer-bradbury.genlayer.com/address/0x8E09e2d21ba7bfb9A3c15E3AD9f5Ab48Ea6050Dc) on Bradbury Testnet**
+**Demo: [youtu.be/Qi2RoeiSLNk](https://youtu.be/Qi2RoeiSLNk)**
 
 An AI-powered DAO treasury management platform built on [GenLayer](https://genlayer.com). TreasuryPilot lets any DAO register its constitution on-chain and automatically evaluate funding proposals against it using an LLM — with validator consensus ensuring the evaluation is fair and reproducible.
 
