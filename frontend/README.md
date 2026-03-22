@@ -1,39 +1,32 @@
-# GenLayer Football Market
+# TreasuryPilot Frontend
 
-Next.js frontend for GenLayer Football Market - AI-powered football match predictions on GenLayer blockchain.
+Next.js frontend for TreasuryPilot — AI-powered DAO treasury governance on GenLayer's Bradbury Testnet.
 
 ## Setup
 
 1. Install dependencies:
 
-**Using bun:**
 ```bash
 bun install
-```
-
-**Using npm:**
-```bash
+# or
 npm install
 ```
 
-2. Create `.env` file:
-```bash
-cp .env.example .env
-```
+2. Create `.env` file and configure environment variables:
 
-3. Configure environment variables:
-   - `NEXT_PUBLIC_CONTRACT_ADDRESS` - GenLayer Football Betting contract address
-   - `NEXT_PUBLIC_STUDIO_URL` - GenLayer Studio URL (default: https://studio.genlayer.com/api)
+```bash
+NEXT_PUBLIC_GENLAYER_RPC_URL=https://rpc-bradbury.genlayer.com
+NEXT_PUBLIC_GENLAYER_CHAIN_ID=61999
+NEXT_PUBLIC_GENLAYER_CHAIN_NAME=Genlayer Bradbury Testnet
+NEXT_PUBLIC_GENLAYER_SYMBOL=GEN
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x8E09e2d21ba7bfb9A3c15E3AD9f5Ab48Ea6050Dc
+```
 
 ## Development
 
-**Using bun:**
 ```bash
 bun dev
-```
-
-**Using npm:**
-```bash
+# or
 npm run dev
 ```
 
@@ -41,44 +34,37 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Build
 
-**Using bun:**
 ```bash
-bun run build
-bun start
+bun run build && bun start
+# or
+npm run build && npm start
 ```
 
-**Using npm:**
-```bash
-npm run build
-npm start
-```
+## Deploy to Vercel
+
+1. Import the repo in Vercel and set the **Root Directory** to `frontend/`
+2. Add the environment variables above in the Vercel dashboard
+3. Deploy — no other configuration needed
 
 ## Tech Stack
 
 - **Next.js 15** - React framework with App Router
 - **TypeScript** - Type safety
-- **Tailwind CSS v4** - Styling with custom glass-morphism theme
+- **Tailwind CSS** - Styling
 - **genlayer-js** - GenLayer blockchain SDK
-- **TanStack Query (React Query)** - Data fetching and caching
-- **Radix UI** - Accessible component primitives
-- **shadcn/ui** - Pre-built UI components
+- **TanStack Query** - Data fetching and caching with polling
+- **MetaMask** - Wallet connection via `window.ethereum`
 
-## Wallet Management
+## Wallet
 
-The app uses GenLayer's account system:
-- **Create Account**: Generate a new private key
-- **Import Account**: Import existing private key
-- **Export Account**: Export your private key (secured)
-- **Disconnect**: Clear stored account data
+Connects via MetaMask. Requires the GenLayer Bradbury Testnet added to MetaMask (chain ID 61999, RPC `https://rpc-bradbury.genlayer.com`). The app will prompt MetaMask to add the network on first connect.
 
-Accounts are stored in browser's localStorage for development convenience.
+Get testnet GEN tokens from the GenLayer faucet.
 
 ## Features
 
-- **Create Bets**: Create football match predictions with team names, game date, and predicted winner (Team 1, Team 2, or Draw)
-- **View Bets**: Real-time bet table with match details, predictions, status, and owners
-- **Resolve Bets**: Bet owners can resolve matches using GenLayer's AI to verify actual results
-- **Leaderboard**: Track top players by points earned from correct predictions
-- **Player Stats**: View your points and ranking in the community
-- **Glass-morphism UI**: Premium dark theme with OKLCH colors, backdrop blur effects, and smooth animations
-- **Real-time Updates**: Automatic data fetching with 3-second polling intervals via TanStack Query
+- **DAO Registry** — Register DAOs with a name and constitution defining councils, budgets, and allocation rules
+- **Proposal Submission** — Submit funding proposals targeting specific councils with amount, description, and rationale
+- **AI Evaluation** — Trigger GenLayer AI validators to evaluate proposals against the DAO constitution and reach consensus
+- **Live Status** — See transaction hash and validator deliberation status immediately after submitting (consensus takes 5–15 min)
+- **Block Explorer** — Direct links to [explorer-bradbury.genlayer.com](https://explorer-bradbury.genlayer.com) for every transaction
