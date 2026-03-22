@@ -1,33 +1,39 @@
-/**
- * TypeScript types for GenLayer Football Betting contract
- */
-
-export interface Bet {
-  id: string;
-  game_date: string;
-  team1: string;
-  team2: string;
-  predicted_winner: string;
-  has_resolved: boolean;
-  real_winner?: string;
-  real_score?: string;
-  resolution_url?: string;
-  owner: string;
+export interface DAO {
+  id: number;
+  name: string;
+  constitution: string;
+  admin: string;
+  proposal_count: number;
 }
 
-export interface LeaderboardEntry {
-  address: string;
-  points: number;
+export interface Proposal {
+  id: number;
+  dao_id: number;
+  title: string;
+  description: string;
+  requested_amount: string;
+  recipient: string;
+  target_council: string;
+  rationale: string;
+  alignment_score: number;
+  risk_level: "low" | "medium" | "high" | "";
+  roi_assessment: "positive" | "neutral" | "negative" | "";
+  recommendation: "approve" | "reject" | "modify" | "pending";
+  reasoning: string;
+  evaluated: boolean;
+}
+
+export interface Council {
+  name: string;
+  budget: string;
+  focus: string;
+  colorIndex: number;
 }
 
 export interface TransactionReceipt {
-  status: string;
-  hash: string;
-  blockNumber?: number;
+  hash?: string;
+  status: number | string;
+  statusName?: string;
+  data?: any;
   [key: string]: any;
-}
-
-export interface BetFilters {
-  resolved?: boolean;
-  owner?: string;
 }
