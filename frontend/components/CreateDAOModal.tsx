@@ -98,6 +98,14 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateOrgModalProps) {
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-slate-600 font-mono">Tx:</span>
                 <span className="text-xs font-mono text-slate-400 truncate">{txHash}</span>
+                <a
+                  href={`https://explorer-studio.genlayer.com/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto text-slate-600 hover:text-cyan-400 transition-colors shrink-0"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               </div>
             </div>
           )}

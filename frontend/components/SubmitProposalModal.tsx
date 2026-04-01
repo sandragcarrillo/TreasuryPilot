@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, ExternalLink } from "lucide-react";
 import { useSubmitProposal } from "@/lib/hooks/useTreasuryPilot";
 import { useWallet } from "@/lib/genlayer/wallet";
 import type { Program } from "@/lib/contracts/types";
@@ -145,6 +145,14 @@ export function SubmitProposalModal({ orgId, programs, onClose, onSuccess }: Sub
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-slate-600 font-mono">Tx:</span>
                 <span className="text-xs font-mono text-slate-400 truncate">{txHash}</span>
+                <a
+                  href={`https://explorer-studio.genlayer.com/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto text-slate-600 hover:text-cyan-400 transition-colors shrink-0"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               </div>
             </div>
           )}
