@@ -20,7 +20,7 @@ export function ConstitutionViewer({ constitution, daoName }: ConstitutionViewer
         <div className="flex items-center gap-2.5">
           <Scroll className="w-4 h-4 text-cyan-500 shrink-0" />
           <span className="text-sm font-body font-medium text-slate-300 tracking-wide">
-            {daoName ? `${daoName} — Constitution` : "DAO Constitution"}
+            {daoName ? `${daoName} — Constitution` : "Organization Constitution"}
           </span>
         </div>
         <div className="flex items-center gap-2 text-slate-600">

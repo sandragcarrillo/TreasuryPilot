@@ -1,8 +1,8 @@
 "use client";
 
-import type { Council } from "@/lib/contracts/types";
+import type { Program } from "@/lib/contracts/types";
 
-const COUNCIL_COLORS = [
+const PROGRAM_COLORS = [
   { accent: "#f59e0b", cls: "council-amber", label: "amber" },
   { accent: "#3b82f6", cls: "council-blue",  label: "blue" },
   { accent: "#06b6d4", cls: "council-teal",  label: "teal" },
@@ -10,12 +10,12 @@ const COUNCIL_COLORS = [
   { accent: "#64748b", cls: "council-slate", label: "slate" },
 ];
 
-interface CouncilCardProps {
-  council: Council;
+interface ProgramCardProps {
+  program: Program;
 }
 
-export function CouncilCard({ council }: CouncilCardProps) {
-  const color = COUNCIL_COLORS[council.colorIndex % COUNCIL_COLORS.length];
+export function ProgramCard({ program }: ProgramCardProps) {
+  const color = PROGRAM_COLORS[program.colorIndex % PROGRAM_COLORS.length];
 
   return (
     <div className={`gov-card gov-card-hover p-5 ${color.cls}`}>
@@ -24,20 +24,20 @@ export function CouncilCard({ council }: CouncilCardProps) {
           <h3
             className="font-body font-semibold text-sm uppercase tracking-wider text-slate-200"
           >
-            {council.name}
+            {program.name}
           </h3>
-          {council.budget && (
+          {program.budget && (
             <span
               className="font-mono text-xs font-bold px-2 py-0.5 rounded-sm shrink-0"
               style={{ color: color.accent, background: `${color.accent}18` }}
             >
-              {council.budget}
+              {program.budget}
             </span>
           )}
         </div>
-        {council.focus && (
+        {program.focus && (
           <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">
-            {council.focus}
+            {program.focus}
           </p>
         )}
       </div>
@@ -45,31 +45,32 @@ export function CouncilCard({ council }: CouncilCardProps) {
   );
 }
 
-/** Parse council info from constitution text */
-export function parseCouncils(constitution: string): Council[] {
-  const councils: Council[] = [];
-  // Match patterns like "- Growth Council: budget 150 ETH, focus on ..."
-  const regex = /[-•]\s*([A-Za-z\s&]+Council)[:\s]+budget\s+([^,]+),\s*focus\s+on\s+([^\n.]+)/gi;
+/** Parse grant program info from constitution text */
+export function parsePrograms(constitution: string): Program[] {
+  const programs: Program[] = [];
+  // Match patterns like "- Education Program: budget $100,000 USD, focus on ..."
+  // Also matches old format: "- Growth Council: budget 150 ETH, focus on ..."
+  const regex = /[-•]\s*([A-Za-z\s&]+(?:Program|Council|Track))[:\s]+budget\s+([^,]+),\s*focus\s+on\s+([^\n.]+)/gi;
   let match;
   while ((match = regex.exec(constitution)) !== null) {
-    councils.push({
+    programs.push({
       name: match[1].trim(),
       budget: match[2].trim(),
       focus: match[3].trim(),
-      colorIndex: councils.length,
+      colorIndex: programs.length,
     });
   }
-  // Fallback: look for "X Council" mentions
-  if (councils.length === 0) {
-    const simple = /([A-Za-z\s]+Council)/g;
+  // Fallback: look for "X Program" or "X Council" mentions
+  if (programs.length === 0) {
+    const simple = /([A-Za-z\s]+(?:Program|Council|Track))/g;
     const seen = new Set<string>();
     while ((match = simple.exec(constitution)) !== null) {
       const name = match[1].trim();
       if (!seen.has(name)) {
         seen.add(name);
-        councils.push({ name, budget: "", focus: "", colorIndex: councils.length });
+        programs.push({ name, budget: "", focus: "", colorIndex: programs.length });
       }
     }
   }
-  return councils;
+  return programs;
 }

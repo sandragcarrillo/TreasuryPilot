@@ -1,21 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { X, ExternalLink } from "lucide-react";
+import { X } from "lucide-react";
 import { useSubmitProposal } from "@/lib/hooks/useTreasuryPilot";
 import { useWallet } from "@/lib/genlayer/wallet";
-import type { Council } from "@/lib/contracts/types";
+import type { Program } from "@/lib/contracts/types";
 
 interface SubmitProposalModalProps {
-  daoId: number;
-  councils: Council[];
+  orgId: number;
+  programs: Program[];
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-const EMPTY = { title: "", description: "", requestedAmount: "", recipient: "", targetCouncil: "", rationale: "" };
+const EMPTY = { title: "", description: "", requestedAmountUsd: "", recipient: "", targetProgram: "", rationale: "" };
 
-export function SubmitProposalModal({ daoId, councils, onClose, onSuccess }: SubmitProposalModalProps) {
+export function SubmitProposalModal({ orgId, programs, onClose, onSuccess }: SubmitProposalModalProps) {
   const [form, setForm] = useState(EMPTY);
   const [txHash, setTxHash] = useState<string | null>(null);
   const { mutateAsync, isPending } = useSubmitProposal();
@@ -28,12 +28,12 @@ export function SubmitProposalModal({ daoId, councils, onClose, onSuccess }: Sub
     e.preventDefault();
     try {
       await mutateAsync({
-        daoId,
+        orgId,
         title: form.title,
         description: form.description,
-        requestedAmount: form.requestedAmount,
+        requestedAmountUsd: form.requestedAmountUsd,
         recipient: form.recipient || address || "",
-        targetCouncil: form.targetCouncil,
+        targetProgram: form.targetProgram,
         rationale: form.rationale,
         onSubmitted: (hash) => setTxHash(hash),
       });
@@ -42,16 +42,15 @@ export function SubmitProposalModal({ daoId, councils, onClose, onSuccess }: Sub
     } catch {}
   };
 
-  const selectedCouncil = councils.find((c) => c.name === form.targetCouncil);
+  const selectedProgram = programs.find((p) => p.name === form.targetProgram);
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
       <div className="gov-card w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800">
           <div>
-            <h2 className="font-display text-lg text-slate-100">Submit Funding Proposal</h2>
-            <p className="text-xs text-slate-600 font-mono mt-0.5">Official request for treasury allocation</p>
+            <h2 className="font-display text-lg text-slate-100">Submit Grant Proposal</h2>
+            <p className="text-xs text-slate-600 font-mono mt-0.5">Official request for grant allocation</p>
           </div>
           <button onClick={onClose} className="text-slate-600 hover:text-slate-400 transition-colors">
             <X className="w-5 h-5" />
@@ -59,7 +58,6 @@ export function SubmitProposalModal({ daoId, councils, onClose, onSuccess }: Sub
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Title */}
           <div className="space-y-1.5">
             <label className="text-xs font-mono uppercase tracking-widest text-slate-500">Proposal Title</label>
             <input
@@ -71,51 +69,48 @@ export function SubmitProposalModal({ daoId, councils, onClose, onSuccess }: Sub
             />
           </div>
 
-          {/* Council + Amount row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-mono uppercase tracking-widest text-slate-500">Target Council</label>
+              <label className="text-xs font-mono uppercase tracking-widest text-slate-500">Target Program</label>
               <select
                 className="gov-input w-full px-4 py-2.5 text-sm appearance-none cursor-pointer"
-                value={form.targetCouncil}
-                onChange={set("targetCouncil")}
+                value={form.targetProgram}
+                onChange={set("targetProgram")}
                 required
               >
-                <option value="">Select council...</option>
-                {councils.map((c) => (
-                  <option key={c.name} value={c.name}>{c.name}</option>
+                <option value="">Select program...</option>
+                {programs.map((p) => (
+                  <option key={p.name} value={p.name}>{p.name}</option>
                 ))}
               </select>
-              {selectedCouncil?.budget && (
-                <p className="text-xs text-slate-600 font-mono">Budget: {selectedCouncil.budget}</p>
+              {selectedProgram?.budget && (
+                <p className="text-xs text-slate-600 font-mono">Budget: {selectedProgram.budget}</p>
               )}
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-mono uppercase tracking-widest text-slate-500">Requested Amount</label>
+              <label className="text-xs font-mono uppercase tracking-widest text-slate-500">Requested Amount (USD)</label>
               <input
                 className="gov-input w-full px-4 py-2.5 text-sm font-mono"
-                placeholder="e.g. 15 ETH"
-                value={form.requestedAmount}
-                onChange={set("requestedAmount")}
+                placeholder="e.g. 15000"
+                value={form.requestedAmountUsd}
+                onChange={set("requestedAmountUsd")}
                 required
               />
             </div>
           </div>
 
-          {/* Description */}
           <div className="space-y-1.5">
             <label className="text-xs font-mono uppercase tracking-widest text-slate-500">Description</label>
             <textarea
               className="gov-input w-full px-4 py-2.5 text-sm resize-none"
               rows={3}
-              placeholder="What will this funding accomplish?"
+              placeholder="What will this grant accomplish?"
               value={form.description}
               onChange={set("description")}
               required
             />
           </div>
 
-          {/* Recipient */}
           <div className="space-y-1.5">
             <label className="text-xs font-mono uppercase tracking-widest text-slate-500">
               Recipient Address <span className="text-slate-700 normal-case">(defaults to your wallet)</span>
@@ -128,7 +123,6 @@ export function SubmitProposalModal({ daoId, councils, onClose, onSuccess }: Sub
             />
           </div>
 
-          {/* Rationale */}
           <div className="space-y-1.5">
             <label className="text-xs font-mono uppercase tracking-widest text-slate-500">Rationale & KPIs</label>
             <textarea
@@ -151,19 +145,10 @@ export function SubmitProposalModal({ daoId, councils, onClose, onSuccess }: Sub
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-slate-600 font-mono">Tx:</span>
                 <span className="text-xs font-mono text-slate-400 truncate">{txHash}</span>
-                <a
-                  href={`https://explorer-bradbury.genlayer.com/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-auto text-slate-600 hover:text-cyan-400 transition-colors shrink-0"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
               </div>
             </div>
           )}
 
-          {/* Footer */}
           <div className="flex gap-3 pt-2 border-t border-slate-800">
             <button
               type="button"

@@ -4,24 +4,24 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { CouncilCard, parseCouncils } from "@/components/CouncilCard";
+import { ProgramCard, parsePrograms } from "@/components/CouncilCard";
 import { ConstitutionViewer } from "@/components/ConstitutionViewer";
 import { ProposalDocket } from "@/components/ProposalDocket";
 import { SubmitProposalModal } from "@/components/SubmitProposalModal";
-import { useDao, useDaoProposals } from "@/lib/hooks/useTreasuryPilot";
+import { useOrg, useOrgProposals } from "@/lib/hooks/useTreasuryPilot";
 
-export default function DAOPage() {
+export default function OrgPage() {
   const { id } = useParams();
   const router = useRouter();
-  const daoId = Number(id);
+  const orgId = Number(id);
 
-  const { data: dao, isLoading: loadingDao } = useDao(isNaN(daoId) ? null : daoId);
-  const { data: proposals = [], isLoading: loadingProposals, refetch } = useDaoProposals(isNaN(daoId) ? null : daoId);
+  const { data: org, isLoading: loadingOrg } = useOrg(isNaN(orgId) ? null : orgId);
+  const { data: proposals = [], isLoading: loadingProposals, refetch } = useOrgProposals(isNaN(orgId) ? null : orgId);
   const [showSubmit, setShowSubmit] = useState(false);
 
-  const councils = dao ? parseCouncils(dao.constitution) : [];
+  const programs = org ? parsePrograms(org.constitution) : [];
 
-  if (loadingDao) {
+  if (loadingOrg) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -32,13 +32,13 @@ export default function DAOPage() {
     );
   }
 
-  if (!dao) {
+  if (!org) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="grow pt-20 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-slate-400 font-body mb-3">DAO not found</p>
+            <p className="text-slate-400 font-body mb-3">Organization not found</p>
             <button onClick={() => router.push("/")} className="text-xs font-mono text-cyan-500 hover:text-cyan-400">← Back to registry</button>
           </div>
         </main>
@@ -65,10 +65,10 @@ export default function DAOPage() {
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>
                 <div className="text-xs font-mono text-slate-600 uppercase tracking-[0.2em] mb-2">
-                  DAO #{dao.id}
+                  Organization #{org.id}
                 </div>
-                <h1 className="font-display text-4xl md:text-5xl text-slate-100">{dao.name}</h1>
-                <p className="text-xs font-mono text-slate-700 mt-2">Admin: {dao.admin}</p>
+                <h1 className="font-display text-4xl md:text-5xl text-slate-100">{org.name}</h1>
+                <p className="text-xs font-mono text-slate-700 mt-2">Owner: {org.owner}</p>
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-mono text-xs text-slate-600 border border-slate-800 px-3 py-1.5">
@@ -79,7 +79,7 @@ export default function DAOPage() {
                   className="flex items-center gap-2 px-5 py-2 text-xs font-mono uppercase tracking-widest text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/10 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  Submit Proposal
+                  Submit Grant Proposal
                 </button>
               </div>
             </div>
@@ -89,17 +89,17 @@ export default function DAOPage() {
         <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-8 py-10 space-y-10">
 
           {/* Constitution */}
-          <ConstitutionViewer constitution={dao.constitution} daoName={dao.name} />
+          <ConstitutionViewer constitution={org.constitution} daoName={org.name} />
 
-          {/* Councils */}
-          {councils.length > 0 && (
+          {/* Grant Programs */}
+          {programs.length > 0 && (
             <section className="space-y-4 animate-fade-in">
               <h2 className="text-xs font-mono uppercase tracking-[0.2em] text-slate-600">
-                Council Structure
+                Grant Programs
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {councils.map((council) => (
-                  <CouncilCard key={council.name} council={council} />
+                {programs.map((program) => (
+                  <ProgramCard key={program.name} program={program} />
                 ))}
               </div>
             </section>
@@ -109,7 +109,7 @@ export default function DAOPage() {
           <section className="space-y-4 animate-slide-up" style={{ animationDelay: "100ms" }}>
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-mono uppercase tracking-[0.2em] text-slate-600">
-                Proposal Docket
+                Grant Proposal Docket
               </h2>
               {proposals.length > 0 && (
                 <button
@@ -132,8 +132,8 @@ export default function DAOPage() {
 
       {showSubmit && (
         <SubmitProposalModal
-          daoId={daoId}
-          councils={councils}
+          orgId={orgId}
+          programs={programs}
           onClose={() => setShowSubmit(false)}
           onSuccess={() => refetch()}
         />

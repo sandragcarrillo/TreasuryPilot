@@ -24,7 +24,7 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: "TreasuryPilot",
-  description: "AI-powered DAO treasury evaluation on GenLayer. Proposals evaluated against your constitution by decentralized AI validators.",
+  description: "AI-powered grants evaluation on GenLayer. Proposals evaluated against your organization's constitution by decentralized AI validators.",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },

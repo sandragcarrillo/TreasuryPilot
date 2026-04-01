@@ -3,26 +3,24 @@
 
 **Live app: [treasury-pilot-frontend.vercel.app](https://treasury-pilot-frontend.vercel.app)**
 
-**Contract: [`0x8E09e2d21ba7bfb9A3c15E3AD9f5Ab48Ea6050Dc`](https://explorer-bradbury.genlayer.com/address/0x8E09e2d21ba7bfb9A3c15E3AD9f5Ab48Ea6050Dc) on Bradbury Testnet**
-
 **Video Demo: [youtu.be/Qi2RoeiSLNk](https://youtu.be/Qi2RoeiSLNk)**
 
-An AI-powered DAO treasury management platform built on [GenLayer](https://genlayer.com). TreasuryPilot lets any DAO register its constitution on-chain and automatically evaluate funding proposals against it using an LLM — with validator consensus ensuring the evaluation is fair and reproducible.
+An AI-powered grants evaluation and tracking platform built on [GenLayer](https://genlayer.com). TreasuryPilot lets any organization register its constitution on-chain and automatically evaluate grant proposals against it using AI validators — with consensus ensuring the evaluation is fair and reproducible.
 
 ## How it works
 
-1. A DAO registers itself with a name and constitution (mission, councils, budgets, rules)
-2. Anyone can submit a treasury proposal targeting a specific council
-3. The contract uses GenLayer's AI capabilities to evaluate the proposal against the constitution
-4. Multiple validators independently run the same evaluation and must reach consensus before the result is stored
-5. The proposal receives a score, risk level, ROI assessment, and a final recommendation (approve / reject / modify)
+1. An organization registers with a name and constitution (mission, programs, budgets, rules)
+2. Anyone can submit a grant proposal targeting a specific program
+3. AI validators independently evaluate the proposal against the constitution and reach consensus
+4. Small grants below a configurable USD threshold can be auto-approved (if enabled by the owner)
+5. Approved grantees submit progress reports, which AI validators evaluate for ROI
 
 Each proposal is evaluated on:
-- **Alignment score** (0–10): how well it fits the DAO mission and target council mandate
-- **Risk level**: low / medium / high, considering budget fit and operational risk
+- **Alignment score** (0-10): how well it fits the org mission and target program
+- **Risk level**: low / medium / high
 - **ROI assessment**: positive / neutral / negative
 - **Recommendation**: approve / reject / modify
-- **Reasoning**: brief explanation covering mission alignment, council fit, and risk factors
+- **Reasoning**: brief explanation covering mission alignment, program fit, and risk factors
 
 ## Architecture
 
@@ -36,27 +34,45 @@ test/               # Integration tests (gltest)
 ## Requirements
 
 - [GenLayer CLI](https://github.com/genlayerlabs/genlayer-cli): `npm install -g genlayer`
-- [GenLayer Studio](https://studio.genlayer.com) (hosted) or running locally
+- [GenLayer Studio](https://studio.genlayer.com) (recommended for development)
 - Node.js + npm (or bun)
-
 
 ## Contract methods
 
-### Write
+### Organization Management
 | Method | Description |
 |--------|-------------|
-| `create_dao(name, constitution)` | Register a new DAO. Caller becomes admin. |
-| `submit_proposal(dao_id, title, description, requested_amount, recipient, target_council, rationale)` | Submit a funding proposal to a DAO. |
+| `create_org(name, constitution)` | Register a new organization. Caller becomes owner. |
+| `update_constitution(org_id, new_constitution)` | Update org constitution (admin or owner). |
+| `set_auto_approve(org_id, enabled, threshold_usd, veto_window_hours)` | Configure auto-approval for small grants (owner only). |
+| `add_admin(org_id, admin_address)` | Add an admin to the org (owner only). |
+| `remove_admin(org_id, admin_address)` | Remove an admin (owner only). |
+| `transfer_ownership(org_id, new_owner)` | Transfer org ownership (owner only). |
+
+### Grant Proposals
+| Method | Description |
+|--------|-------------|
+| `submit_proposal(org_id, title, description, requested_amount_usd, recipient, target_program, rationale)` | Submit a grant proposal. |
 | `evaluate_proposal(proposal_id)` | Trigger AI evaluation with validator consensus. |
-| `update_constitution(dao_id, new_constitution)` | Update DAO constitution (admin only). |
+| `veto_proposal(proposal_id)` | Veto an auto-approved proposal (admin or owner). |
+
+### Progress Reports
+| Method | Description |
+|--------|-------------|
+| `submit_report(proposal_id, milestones_completed, funds_spent_usd, deliverables, evidence_urls)` | Submit a progress report for an approved grant. |
+| `evaluate_report(proposal_id, report_number)` | AI evaluates report against original proposal KPIs. |
 
 ### Read
 | Method | Description |
 |--------|-------------|
-| `get_dao(dao_id)` | Get DAO info and proposal count. |
-| `get_proposal(proposal_id)` | Get proposal details and evaluation results. |
-| `get_dao_count()` | Total number of registered DAOs. |
-| `get_proposal_count()` | Total number of proposals across all DAOs. |
+| `get_org(org_id)` | Get org info, constitution, auto-approve config. |
+| `get_org_count()` | Total number of registered organizations. |
+| `get_org_admins(org_id)` | List of admin addresses for an org. |
+| `get_proposal(proposal_id)` | Get proposal details, evaluation, and status. |
+| `get_proposal_count()` | Total number of proposals. |
+| `get_report(proposal_id, report_number)` | Get a specific progress report. |
+| `get_report_count(proposal_id)` | Number of reports for a proposal. |
+| `get_program_budget_status(org_id)` | Total USD approved per program. |
 
 ## License
 

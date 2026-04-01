@@ -34,7 +34,7 @@ export function ProposalDocket({ proposals, loading, onSubmitClick }: ProposalDo
             onClick={onSubmitClick}
             className="mt-2 px-5 py-2 text-xs font-mono uppercase tracking-widest border border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 transition-colors"
           >
-            Submit Proposal
+            Submit Grant Proposal
           </button>
         )}
       </div>
@@ -47,7 +47,7 @@ export function ProposalDocket({ proposals, loading, onSubmitClick }: ProposalDo
       <div className="hidden md:grid grid-cols-12 px-5 py-3 border-b border-slate-800 bg-black/20">
         <div className="col-span-1 text-xs font-mono text-slate-600 uppercase tracking-widest">#</div>
         <div className="col-span-5 text-xs font-mono text-slate-600 uppercase tracking-widest">Proposal</div>
-        <div className="col-span-2 text-xs font-mono text-slate-600 uppercase tracking-widest">Council</div>
+        <div className="col-span-2 text-xs font-mono text-slate-600 uppercase tracking-widest">Program</div>
         <div className="col-span-2 text-xs font-mono text-slate-600 uppercase tracking-widest">Amount</div>
         <div className="col-span-2 text-xs font-mono text-slate-600 uppercase tracking-widest">Verdict</div>
       </div>
@@ -70,8 +70,8 @@ export function ProposalDocket({ proposals, loading, onSubmitClick }: ProposalDo
                 </div>
                 <div className="text-xs text-slate-600 mt-0.5 line-clamp-1">{p.description}</div>
               </div>
-              <div className="col-span-2 text-xs text-slate-500 font-mono">{p.target_council || "—"}</div>
-              <div className="col-span-2 text-xs font-mono text-slate-400">{p.requested_amount}</div>
+              <div className="col-span-2 text-xs text-slate-500 font-mono">{p.target_program || "—"}</div>
+              <div className="col-span-2 text-xs font-mono text-slate-400">${p.requested_amount_usd}</div>
               <div className="col-span-2">
                 <VerdictBadge recommendation={p.recommendation} size="sm" animate={false} />
               </div>
@@ -87,8 +87,8 @@ export function ProposalDocket({ proposals, loading, onSubmitClick }: ProposalDo
                 <VerdictBadge recommendation={p.recommendation} size="sm" animate={false} />
               </div>
               <div className="flex gap-4 text-xs font-mono text-slate-500">
-                <span>{p.target_council}</span>
-                <span>{p.requested_amount}</span>
+                <span>{p.target_program}</span>
+                <span>${p.requested_amount_usd}</span>
               </div>
             </div>
           </Link>

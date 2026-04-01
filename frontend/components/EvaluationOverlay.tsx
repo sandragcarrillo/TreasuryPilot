@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 const MESSAGES = [
   "Analyzing proposal...",
-  "Checking council budget compliance...",
+  "Checking program budget compliance...",
   "Evaluating mission alignment...",
   "Assessing risk factors...",
   "Calculating ROI projection...",

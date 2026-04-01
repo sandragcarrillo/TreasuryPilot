@@ -18,7 +18,7 @@ export function Navbar() {
 
         <div className="flex items-center gap-4">
           <span className="hidden md:block text-xs font-mono text-slate-700 tracking-widest uppercase">
-            Bradbury Testnet
+            GenLayer Studio
           </span>
           <AccountPanel />
         </div>

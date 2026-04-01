@@ -2,26 +2,26 @@
 
 import { useState } from "react";
 import { X, ExternalLink } from "lucide-react";
-import { useCreateDao } from "@/lib/hooks/useTreasuryPilot";
+import { useCreateOrg } from "@/lib/hooks/useTreasuryPilot";
 import { useWallet } from "@/lib/genlayer/wallet";
 
-interface CreateDAOModalProps {
+interface CreateOrgModalProps {
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-const PLACEHOLDER_CONSTITUTION = `This DAO manages a treasury dedicated to [your mission].
+const PLACEHOLDER_CONSTITUTION = `This organization manages a grants program dedicated to [your mission].
 
-MISSION: [Describe the DAO's core purpose]
+MISSION: [Describe the organization's core purpose]
 
-ORGANIZATIONAL STRUCTURE:
+GRANT PROGRAMS:
 
-- [Council Name]: budget [X] ETH, focus on [description].
-- [Council Name]: budget [X] ETH, focus on [description].
+- [Program Name]: budget $[X] USD, focus on [description].
+- [Program Name]: budget $[X] USD, focus on [description].
 
 ALLOCATION RULES:
-1. Maximum single allocation: [X] ETH
-2. Proposals must target a specific council
+1. Maximum single grant: $[X] USD
+2. Proposals must target a specific program
 3. All recipients must have prior relevant contributions
 
 RISK GUIDELINES:
@@ -32,11 +32,11 @@ ALIGNMENT CRITERIA:
 - Must serve [community] directly
 - Must include measurable KPIs and success metrics`;
 
-export function CreateDAOModal({ onClose, onSuccess }: CreateDAOModalProps) {
+export function CreateDAOModal({ onClose, onSuccess }: CreateOrgModalProps) {
   const [name, setName] = useState("");
   const [constitution, setConstitution] = useState("");
   const [txHash, setTxHash] = useState<string | null>(null);
-  const { mutateAsync, isPending } = useCreateDao();
+  const { mutateAsync, isPending } = useCreateOrg();
   const { isConnected } = useWallet();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,7 +53,7 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateDAOModalProps) {
       <div className="gov-card w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800">
           <div>
-            <h2 className="font-display text-lg text-slate-100">Register DAO</h2>
+            <h2 className="font-display text-lg text-slate-100">Register Organization</h2>
             <p className="text-xs text-slate-600 font-mono mt-0.5">Add your organization to the TreasuryPilot registry</p>
           </div>
           <button onClick={onClose} className="text-slate-600 hover:text-slate-400 transition-colors">
@@ -63,10 +63,10 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateDAOModalProps) {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="space-y-1.5">
-            <label className="text-xs font-mono uppercase tracking-widest text-slate-500">DAO Name</label>
+            <label className="text-xs font-mono uppercase tracking-widest text-slate-500">Organization Name</label>
             <input
               className="gov-input w-full px-4 py-2.5 text-sm"
-              placeholder="e.g. LATAM Web3 DAO"
+              placeholder="e.g. LATAM Web3 Public Goods"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -76,7 +76,7 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateDAOModalProps) {
           <div className="space-y-1.5">
             <label className="text-xs font-mono uppercase tracking-widest text-slate-500">Constitution</label>
             <p className="text-xs text-slate-600">
-              Include your mission, council structure with budgets, allocation rules, and alignment criteria.
+              Include your mission, grant programs with budgets, allocation rules, and alignment criteria.
             </p>
             <textarea
               className="gov-input w-full px-4 py-3 text-sm font-mono resize-none"
@@ -94,18 +94,10 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateDAOModalProps) {
                 <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                 <span className="text-xs font-mono uppercase tracking-widest text-cyan-400">AI Validators Deliberating</span>
               </div>
-              <p className="text-xs text-slate-400">Consensus takes 5–15 minutes. You can close this modal — your DAO will appear once validators agree.</p>
+              <p className="text-xs text-slate-400">Consensus takes 5–15 minutes. You can close this modal — your organization will appear once validators agree.</p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-slate-600 font-mono">Tx:</span>
                 <span className="text-xs font-mono text-slate-400 truncate">{txHash}</span>
-                <a
-                  href={`https://explorer-bradbury.genlayer.com/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-auto text-slate-600 hover:text-cyan-400 transition-colors shrink-0"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
               </div>
             </div>
           )}
@@ -123,12 +115,12 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateDAOModalProps) {
               disabled={isPending || !isConnected}
               className="flex-1 py-2.5 text-sm font-mono uppercase tracking-widest text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              {isPending ? "Registering..." : "Register DAO"}
+              {isPending ? "Registering..." : "Register Organization"}
             </button>
           </div>
 
           {!isConnected && (
-            <p className="text-center text-xs text-slate-600 font-mono">Connect your wallet to register a DAO.</p>
+            <p className="text-center text-xs text-slate-600 font-mono">Connect your wallet to register an organization.</p>
           )}
         </form>
       </div>
