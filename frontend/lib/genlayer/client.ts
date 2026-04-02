@@ -219,6 +219,13 @@ export async function connectMetaMask(): Promise<string> {
     throw new Error("No accounts found");
   }
 
+  // Ensure we're on the GenLayer network (add it if missing, switch if on wrong chain)
+  try {
+    await switchToGenLayerNetwork();
+  } catch (err) {
+    console.warn("Could not auto-switch network:", err);
+  }
+
   return accounts[0];
 }
 
