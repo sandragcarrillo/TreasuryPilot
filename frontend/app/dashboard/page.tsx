@@ -9,24 +9,6 @@ import { VerdictBadge } from "@/components/VerdictBadge";
 import { useOrgs, useAllProposals } from "@/lib/hooks/useTreasuryPilot";
 import { useWallet } from "@/lib/genlayer/wallet";
 
-const STATUS_COLORS: Record<string, string> = {
-  pending:            "text-slate-400 border-slate-700 bg-slate-900/40",
-  approved:           "text-emerald-400 border-emerald-800 bg-emerald-950/30",
-  rejected:           "text-red-400 border-red-800 bg-red-950/30",
-  needs_modification: "text-amber-400 border-amber-800 bg-amber-950/30",
-  auto_approved:      "text-cyan-400 border-cyan-800 bg-cyan-950/30",
-  vetoed:             "text-purple-400 border-purple-800 bg-purple-950/30",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pending:            "Pending",
-  approved:           "Approved",
-  rejected:           "Rejected",
-  needs_modification: "Modify",
-  auto_approved:      "Auto-Approved",
-  vetoed:             "Vetoed",
-};
-
 export default function DashboardPage() {
   const router = useRouter();
   const { address, isConnected } = useWallet();
@@ -172,11 +154,10 @@ export default function DashboardPage() {
               <div className="gov-card overflow-hidden">
                 <div className="hidden md:grid grid-cols-12 px-5 py-3 border-b border-slate-800 bg-black/20">
                   <div className="col-span-1 text-xs font-mono text-slate-600 uppercase tracking-widest">#</div>
-                  <div className="col-span-4 text-xs font-mono text-slate-600 uppercase tracking-widest">Proposal</div>
+                  <div className="col-span-5 text-xs font-mono text-slate-600 uppercase tracking-widest">Proposal</div>
                   <div className="col-span-2 text-xs font-mono text-slate-600 uppercase tracking-widest">Program</div>
                   <div className="col-span-2 text-xs font-mono text-slate-600 uppercase tracking-widest">Amount</div>
-                  <div className="col-span-1 text-xs font-mono text-slate-600 uppercase tracking-widest">Verdict</div>
-                  <div className="col-span-2 text-xs font-mono text-slate-600 uppercase tracking-widest">Status</div>
+                  <div className="col-span-2 text-xs font-mono text-slate-600 uppercase tracking-widest">Verdict</div>
                 </div>
                 <div className="divide-y divide-slate-800/60">
                   {myProposals.map((p) => (
@@ -187,20 +168,15 @@ export default function DashboardPage() {
                     >
                       <div className="hidden md:grid grid-cols-12 items-center px-5 py-4 hover:bg-white/[0.03] transition-colors">
                         <div className="col-span-1 font-mono text-slate-600 text-sm">{p.id}</div>
-                        <div className="col-span-4 pr-4">
+                        <div className="col-span-5 pr-4">
                           <div className="font-body font-medium text-slate-200 text-sm group-hover:text-cyan-400 transition-colors line-clamp-1">
                             {p.title}
                           </div>
                         </div>
                         <div className="col-span-2 text-xs text-slate-500 font-mono">{p.target_program || "—"}</div>
                         <div className="col-span-2 text-xs font-mono text-slate-400">${p.requested_amount_usd}</div>
-                        <div className="col-span-1">
-                          <VerdictBadge recommendation={p.recommendation} size="sm" animate={false} />
-                        </div>
                         <div className="col-span-2">
-                          <span className={`font-mono text-[10px] px-2 py-0.5 border uppercase tracking-widest ${STATUS_COLORS[p.status] || ""}`}>
-                            {STATUS_LABELS[p.status] || p.status}
-                          </span>
+                          <VerdictBadge recommendation={p.recommendation} status={p.status} size="sm" animate={false} />
                         </div>
                       </div>
                       {/* Mobile */}
@@ -210,14 +186,11 @@ export default function DashboardPage() {
                             <span className="font-mono text-slate-600 text-xs mr-2">#{p.id}</span>
                             <span className="font-body font-medium text-slate-200 text-sm">{p.title}</span>
                           </div>
-                          <VerdictBadge recommendation={p.recommendation} size="sm" animate={false} />
+                          <VerdictBadge recommendation={p.recommendation} status={p.status} size="sm" animate={false} />
                         </div>
-                        <div className="flex items-center gap-3 text-xs font-mono text-slate-500">
+                        <div className="flex gap-4 text-xs font-mono text-slate-500">
                           <span>{p.target_program}</span>
                           <span>${p.requested_amount_usd}</span>
-                          <span className={`px-1.5 py-0.5 border text-[10px] uppercase ${STATUS_COLORS[p.status] || ""}`}>
-                            {STATUS_LABELS[p.status] || p.status}
-                          </span>
                         </div>
                       </div>
                     </Link>
