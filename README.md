@@ -93,6 +93,8 @@ Next.js 15 app with:
 
 ## Telegram Bot
 
+**[@TreasuryPilotBot](https://t.me/TreasuryPilotBot)**
+
 Conversational bot for org owners to manage their grants program from Telegram. Wallet links persist across restarts.
 
 **Commands:**
