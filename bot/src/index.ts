@@ -2,6 +2,7 @@ import "dotenv/config";
 import { ContractReader } from "./contract.js";
 import { ContractWatcher, type WatcherEvent } from "./watcher.js";
 import { createBot, getNotificationChatIds } from "./bot.js";
+import { walletLinks, chatOrgs } from "./store.js";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
@@ -18,7 +19,7 @@ if (!CONTRACT_ADDRESS) {
 }
 
 const reader = new ContractReader(CONTRACT_ADDRESS, RPC_URL);
-const { bot, walletLinks, chatOrgs } = createBot(BOT_TOKEN, reader);
+const { bot } = createBot(BOT_TOKEN, reader);
 
 const STATUS_EMOJI: Record<string, string> = {
   approved: "✅",

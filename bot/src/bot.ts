@@ -1,5 +1,6 @@
 import { Bot, Context, InlineKeyboard } from "grammy";
 import { ContractReader } from "./contract.js";
+import { walletLinks, chatOrgs, persist } from "./store.js";
 
 const STATUS_EMOJI: Record<string, string> = {
   pending:            "⏳",
@@ -16,13 +17,6 @@ const ROI_EMOJI: Record<string, string> = {
   exceeding: "🚀",
   failed:    "❌",
 };
-
-/**
- * Stores which wallet addresses are linked to which Telegram chat IDs.
- * In production you'd persist this to a database.
- */
-const walletLinks = new Map<string, number>(); // wallet (lowercase) → chatId
-const chatOrgs = new Map<number, number[]>();   // chatId → org IDs they own
 
 export function createBot(token: string, reader: ContractReader) {
   const bot = new Bot(token);
@@ -76,6 +70,7 @@ export function createBot(token: string, reader: ContractReader) {
 
     const lower = address.toLowerCase();
     walletLinks.set(lower, ctx.chat.id);
+    persist();
 
     // Find their orgs
     await ctx.reply("🔗 Linking wallet... scanning for your organizations...");
@@ -99,6 +94,7 @@ export function createBot(token: string, reader: ContractReader) {
       }
 
       chatOrgs.set(ctx.chat.id, ownedOrgs);
+      persist();
 
       if (ownedOrgs.length > 0) {
         const orgNames = await Promise.all(
@@ -132,6 +128,7 @@ export function createBot(token: string, reader: ContractReader) {
     }
     toRemove.forEach((w) => walletLinks.delete(w));
     chatOrgs.delete(ctx.chat.id);
+    persist();
     await ctx.reply("🔓 Wallet unlinked. You won't receive notifications anymore.");
   });
 
@@ -326,7 +323,7 @@ export function createBot(token: string, reader: ContractReader) {
     }
   });
 
-  return { bot, walletLinks, chatOrgs };
+  return { bot };
 }
 
 // ─── Notification sender ─────────────────────────────────────────────────────
