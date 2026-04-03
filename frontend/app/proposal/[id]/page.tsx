@@ -133,7 +133,7 @@ export default function ProposalPage() {
         <div className="border-b border-slate-800/80 bg-black/30">
           <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-8">
             <button
-              onClick={() => org ? router.push(`/dao/${org.id}`) : router.back()}
+              onClick={() => org ? router.push(`/org/${org.id}`) : router.back()}
               className="flex items-center gap-1.5 text-xs font-mono text-slate-600 hover:text-slate-400 transition-colors mb-5"
             >
               <ArrowLeft className="w-3.5 h-3.5" />

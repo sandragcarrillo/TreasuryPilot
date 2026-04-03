@@ -25,5 +25,5 @@ Next.js frontend for TreasuryPilot — AI-powered grants evaluation and tracking
 |-------|-------------|
 | `/` | Organization registry — browse, register new orgs |
 | `/dashboard` | Personal dashboard — your orgs and submitted proposals |
-| `/dao/[id]` | Organization detail — constitution, programs, budget, proposals, settings |
+| `/org/[id]` | Organization detail — constitution, programs, budget, proposals, settings |
 | `/proposal/[id]` | Proposal detail — AI verdict, status, veto, progress reports |

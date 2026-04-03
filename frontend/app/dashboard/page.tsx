@@ -98,7 +98,7 @@ export default function DashboardPage() {
                 {myOrgs.map((org) => (
                   <Link
                     key={org.id}
-                    href={`/dao/${org.id}`}
+                    href={`/org/${org.id}`}
                     className="gov-card gov-card-hover p-5 block group"
                   >
                     <div className="flex items-start justify-between gap-3">

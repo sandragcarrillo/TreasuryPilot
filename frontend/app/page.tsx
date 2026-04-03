@@ -77,7 +77,7 @@ export default function HomePage() {
                 {orgs.map((org, i) => (
                   <Link
                     key={org.id}
-                    href={`/dao/${org.id}`}
+                    href={`/org/${org.id}`}
                     className="gov-card gov-card-hover p-6 block animate-fade-in group"
                     style={{ animationDelay: `${i * 80}ms` }}
                   >
@@ -127,9 +127,9 @@ export default function HomePage() {
 
       <footer className="border-t border-slate-900 py-4 px-6">
         <div className="max-w-5xl mx-auto flex items-center justify-between text-xs font-mono text-slate-700">
-          <span>TreasuryPilot · Built on GenLayer</span>
-          <a href="https://docs.genlayer.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-500 transition-colors">
-            docs.genlayer.com
+          <span>TreasuryPilot</span>
+          <a href="https://github.com/sandragcarrillo/TreasuryPilot" target="_blank" rel="noopener noreferrer" className="hover:text-slate-500 transition-colors">
+            GitHub
           </a>
         </div>
       </footer>
