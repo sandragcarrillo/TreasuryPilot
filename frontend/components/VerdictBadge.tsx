@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import type { Proposal } from "@/lib/contracts/types";
 
 type Recommendation = Proposal["recommendation"];
+type Status = Proposal["status"];
 
-const VERDICT_CONFIG: Record<Recommendation, { label: string; color: string; glowClass: string; border: string; bg: string }> = {
+const VERDICT_CONFIG: Record<string, { label: string; color: string; glowClass: string; border: string; bg: string }> = {
   approve: {
     label: "APPROVED",
     color: "#10b981",
@@ -34,22 +35,45 @@ const VERDICT_CONFIG: Record<Recommendation, { label: string; color: string; glo
     border: "border-slate-600/40",
     bg: "bg-slate-900/40",
   },
+  auto_approved: {
+    label: "AUTO-APPROVED",
+    color: "#06b6d4",
+    glowClass: "",
+    border: "border-cyan-500/60",
+    bg: "bg-cyan-950/40",
+  },
+  vetoed: {
+    label: "VETOED",
+    color: "#a78bfa",
+    glowClass: "",
+    border: "border-purple-500/60",
+    bg: "bg-purple-950/40",
+  },
 };
+
+/** Pick the right verdict key: status overrides recommendation for special cases */
+function getVerdictKey(recommendation: Recommendation, status?: Status): string {
+  if (status === "vetoed") return "vetoed";
+  if (status === "auto_approved") return "auto_approved";
+  return recommendation;
+}
 
 interface VerdictBadgeProps {
   recommendation: Recommendation;
+  status?: Status;
   size?: "sm" | "lg";
   animate?: boolean;
 }
 
-export function VerdictBadge({ recommendation, size = "lg", animate = true }: VerdictBadgeProps) {
+export function VerdictBadge({ recommendation, status, size = "lg", animate = true }: VerdictBadgeProps) {
   const [visible, setVisible] = useState(false);
-  const config = VERDICT_CONFIG[recommendation] ?? VERDICT_CONFIG.pending;
+  const key = getVerdictKey(recommendation, status);
+  const config = VERDICT_CONFIG[key] ?? VERDICT_CONFIG.pending;
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 100);
     return () => clearTimeout(t);
-  }, [recommendation]);
+  }, [recommendation, status]);
 
   if (size === "sm") {
     return (
@@ -76,14 +100,14 @@ export function VerdictBadge({ recommendation, size = "lg", animate = true }: Ve
         `}
         style={{ color: config.color }}
       >
-        {/* Corner marks — like a rubber stamp */}
+        {/* Corner marks */}
         <span className="absolute top-1.5 left-1.5 w-3 h-3 border-t-2 border-l-2" style={{ borderColor: config.color }} />
         <span className="absolute top-1.5 right-1.5 w-3 h-3 border-t-2 border-r-2" style={{ borderColor: config.color }} />
         <span className="absolute bottom-1.5 left-1.5 w-3 h-3 border-b-2 border-l-2" style={{ borderColor: config.color }} />
         <span className="absolute bottom-1.5 right-1.5 w-3 h-3 border-b-2 border-r-2" style={{ borderColor: config.color }} />
         {config.label}
       </div>
-      {recommendation === "pending" && (
+      {key === "pending" && (
         <p className="text-xs text-slate-500 tracking-wider uppercase font-mono">Awaiting evaluation</p>
       )}
     </div>

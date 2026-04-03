@@ -18,29 +18,25 @@ export function ProgramCard({ program }: ProgramCardProps) {
   const color = PROGRAM_COLORS[program.colorIndex % PROGRAM_COLORS.length];
 
   return (
-    <div className={`gov-card gov-card-hover p-5 ${color.cls}`}>
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <h3
-            className="font-body font-semibold text-sm uppercase tracking-wider text-slate-200"
+    <div className={`gov-card gov-card-hover p-5 h-full flex flex-col ${color.cls}`}>
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="font-body font-semibold text-sm uppercase tracking-wider text-slate-200 line-clamp-2">
+          {program.name}
+        </h3>
+        {program.budget && (
+          <span
+            className="font-mono text-xs font-bold px-2 py-0.5 rounded-sm shrink-0"
+            style={{ color: color.accent, background: `${color.accent}18` }}
           >
-            {program.name}
-          </h3>
-          {program.budget && (
-            <span
-              className="font-mono text-xs font-bold px-2 py-0.5 rounded-sm shrink-0"
-              style={{ color: color.accent, background: `${color.accent}18` }}
-            >
-              {program.budget}
-            </span>
-          )}
-        </div>
-        {program.focus && (
-          <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">
-            {program.focus}
-          </p>
+            {program.budget}
+          </span>
         )}
       </div>
+      {program.focus && (
+        <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 mt-2">
+          {program.focus}
+        </p>
+      )}
     </div>
   );
 }

@@ -87,13 +87,13 @@ export default function OrgPage() {
                 <p className="text-xs font-mono text-slate-700 mt-2">Owner: {org.owner}</p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-xs text-slate-600 border border-slate-800 px-3 py-1.5">
+                <span className="flex items-center font-mono text-xs text-slate-600 border border-slate-800 h-9 px-3">
                   {proposals.length} proposals
                 </span>
                 {canManage && (
                   <button
                     onClick={() => setShowSettings((v) => !v)}
-                    className="flex items-center gap-2 px-4 py-2 text-xs font-mono uppercase tracking-widest text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-slate-300 transition-colors"
+                    className="flex items-center gap-2 h-9 px-4 text-xs font-mono uppercase tracking-widest text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-slate-300 transition-colors"
                   >
                     <Settings className="w-3.5 h-3.5" />
                     Settings
@@ -101,10 +101,10 @@ export default function OrgPage() {
                 )}
                 <button
                   onClick={() => setShowSubmit(true)}
-                  className="flex items-center gap-2 px-5 py-2 text-xs font-mono uppercase tracking-widest text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/10 transition-colors"
+                  className="flex items-center gap-2 h-9 px-4 text-xs font-mono uppercase tracking-widest text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/10 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  Submit Grant Proposal
+                  Submit Proposal
                 </button>
               </div>
             </div>
@@ -130,11 +130,11 @@ export default function OrgPage() {
               <h2 className="text-xs font-mono uppercase tracking-[0.2em] text-slate-600">
                 Grant Programs
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-stretch">
                 {programs.map((program) => {
                   const spent = budgetStatus[program.name] || "0";
                   return (
-                    <div key={program.name} className="space-y-1">
+                    <div key={program.name} className="flex flex-col gap-1">
                       <ProgramCard program={program} />
                       {parseFloat(spent) > 0 && (
                         <div className="text-[10px] font-mono text-slate-600 px-1">

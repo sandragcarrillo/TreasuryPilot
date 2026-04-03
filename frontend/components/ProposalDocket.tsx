@@ -73,7 +73,7 @@ export function ProposalDocket({ proposals, loading, onSubmitClick }: ProposalDo
               <div className="col-span-2 text-xs text-slate-500 font-mono">{p.target_program || "—"}</div>
               <div className="col-span-2 text-xs font-mono text-slate-400">${p.requested_amount_usd}</div>
               <div className="col-span-2">
-                <VerdictBadge recommendation={p.recommendation} size="sm" animate={false} />
+                <VerdictBadge recommendation={p.recommendation} status={p.status} size="sm" animate={false} />
               </div>
             </div>
 
@@ -84,7 +84,7 @@ export function ProposalDocket({ proposals, loading, onSubmitClick }: ProposalDo
                   <span className="font-mono text-slate-600 text-xs mr-2">#{p.id}</span>
                   <span className="font-body font-medium text-slate-200 text-sm">{p.title}</span>
                 </div>
-                <VerdictBadge recommendation={p.recommendation} size="sm" animate={false} />
+                <VerdictBadge recommendation={p.recommendation} status={p.status} size="sm" animate={false} />
               </div>
               <div className="flex gap-4 text-xs font-mono text-slate-500">
                 <span>{p.target_program}</span>
