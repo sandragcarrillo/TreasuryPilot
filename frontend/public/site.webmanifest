@@ -1,11 +1,11 @@
 {
-  "name": "GenLayer Football Market",
-  "short_name": "GenLayer Market",
-  "description": "AI-powered football match predictions on GenLayer blockchain",
+  "name": "TreasuryPilot",
+  "short_name": "TreasuryPilot",
+  "description": "AI-powered grants evaluation and tracking on GenLayer",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#9B6AF6",
+  "background_color": "#0c0c12",
+  "theme_color": "#06b6d4",
   "icons": [
     {
       "src": "/favicon.svg",

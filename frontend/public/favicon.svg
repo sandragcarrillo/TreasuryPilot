@@ -1,3 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.76 91.93">
-  <path fill="#FFFFFF" d="M44.26 32.35L27.72 67.12L43.29 74.9L0 91.93L44.26 0L44.26 32.35ZM53.5 32.35L70.04 67.12L54.47 74.9L97.76 91.93L53.5 0L53.5 32.35ZM48.64 43.78L58.33 62.94L48.64 67.69L39.47 62.92L48.64 43.78Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+<rect width="64" height="64" rx="14" fill="#0c0c14"/>
+<path d="M32 10 L47 19 L47 41 L32 50 L17 41 L17 19 Z" fill="#111827" stroke="#06b6d4" stroke-width="1.5" opacity="0.8"/>
+<text x="32" y="34" text-anchor="middle" font-size="14" font-weight="700" fill="#06b6d4" font-family="monospace">T</text>
+<circle cx="24" cy="46" r="2" fill="#10b981"/>
+<circle cx="32" cy="46" r="2" fill="#06b6d4"/>
+<circle cx="40" cy="46" r="2" fill="#f59e0b"/>
 </svg>

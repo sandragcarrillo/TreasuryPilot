@@ -41,26 +41,6 @@ deploy/             # TypeScript deployment script
 test/               # Integration tests (gltest)
 ```
 
-## Requirements
-
-- [GenLayer CLI](https://github.com/genlayerlabs/genlayer-cli): `npm install -g genlayer`
-- [GenLayer Studio](https://studio.genlayer.com) (recommended for development)
-- Node.js + npm (or bun)
-
-## Getting started
-
-```bash
-# Deploy contract
-genlayer network set studionet
-npm run deploy
-
-# Run frontend
-cd frontend && npm install && npm run dev
-
-# Run Telegram bot
-cd bot && npm install && npm run dev
-```
-
 ## Contract methods
 
 ### Organization Management
@@ -113,21 +93,29 @@ Next.js 15 app with:
 
 ## Telegram Bot
 
-Conversational bot for org owners to manage their grants program from Telegram:
+Conversational bot for org owners to manage their grants program from Telegram. Wallet links persist across restarts.
+
+**Commands:**
 - `/link 0xAddress` — Link wallet, auto-detect owned organizations
+- `/unlink` — Remove wallet link
 - `/myorgs` — View your organizations
 - `/proposals <org_id>` — List proposals with status and AI scores
 - `/proposal <id>` — Full proposal detail with evaluation reasoning
 - `/budget <org_id>` — Program budget breakdown
 - `/reports <proposal_id>` — Progress reports with ROI status
+- `/stats` — Overall platform stats
 
-**Push notifications** for:
+**Push notifications** (automatic, every 30s poll):
 - New proposals submitted to your org
 - AI evaluation results (with score, risk, recommendation)
 - Auto-approved grants (with "process payment" reminder)
 - Vetoed proposals
 - New progress reports
 - Report evaluation results (with ROI status)
+
+## Explorer
+
+All transactions available at [GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0xa477A17e16715e2ec81cf620702f3E0574d15af3)
 
 ## License
 
