@@ -3,11 +3,11 @@
 import type { Program } from "@/lib/contracts/types";
 
 const PROGRAM_COLORS = [
-  { accent: "#f59e0b", cls: "council-amber", label: "amber" },
-  { accent: "#3b82f6", cls: "council-blue",  label: "blue" },
-  { accent: "#06b6d4", cls: "council-teal",  label: "teal" },
-  { accent: "#8b5cf6", cls: "council-purple", label: "purple" },
-  { accent: "#64748b", cls: "council-slate", label: "slate" },
+  { accent: "#7FE5B0", cls: "council-teal",  label: "accent" },
+  { accent: "#E5C07B", cls: "council-amber", label: "warning" },
+  { accent: "#A78BFA", cls: "council-purple", label: "vetoed" },
+  { accent: "#8E9793", cls: "council-blue",  label: "dim" },
+  { accent: "#5C6360", cls: "council-slate", label: "faint" },
 ];
 
 interface ProgramCardProps {
@@ -18,14 +18,14 @@ export function ProgramCard({ program }: ProgramCardProps) {
   const color = PROGRAM_COLORS[program.colorIndex % PROGRAM_COLORS.length];
 
   return (
-    <div className={`gov-card gov-card-hover p-5 h-full flex flex-col ${color.cls}`}>
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="font-body font-semibold text-sm uppercase tracking-wider text-slate-200 line-clamp-2">
+    <div className={`gov-card gov-card-hover p-6 h-full flex flex-col ${color.cls}`}>
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="font-medium text-sm text-text line-clamp-2 leading-snug tracking-tight">
           {program.name}
         </h3>
         {program.budget && (
           <span
-            className="font-mono text-xs font-bold px-2 py-0.5 rounded-sm shrink-0"
+            className="font-mono text-[11px] font-bold px-2 py-0.5 shrink-0"
             style={{ color: color.accent, background: `${color.accent}18` }}
           >
             {program.budget}
@@ -33,7 +33,7 @@ export function ProgramCard({ program }: ProgramCardProps) {
         )}
       </div>
       {program.focus && (
-        <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 mt-2">
+        <p className="text-xs text-text-dim leading-relaxed line-clamp-3 mt-3">
           {program.focus}
         </p>
       )}

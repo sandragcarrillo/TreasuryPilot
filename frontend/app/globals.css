@@ -2,47 +2,92 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* TreasuryPilot Design System — Governance Command Center */
+/* TreasuryPilot Design System — Editorial Governance */
 :root {
-  /* Deep slate base — late-night senate chamber */
-  --background: #0c0c12;
-  --foreground: #e2e8f0;
+  /* Backgrounds */
+  --bg: #0B0D0C;
+  --bg-elev: #131614;
+  --bg-elev-2: #1A1E1B;
 
-  --card: #12121a;
-  --card-foreground: #e2e8f0;
-  --popover: #12121a;
-  --popover-foreground: #e2e8f0;
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-soft: rgba(255, 255, 255, 0.04);
+  --border-strong: rgba(255, 255, 255, 0.14);
 
-  /* Cyan/teal for interactive — neutral and institutional */
-  --primary: #06b6d4;
-  --primary-foreground: #0c0c12;
+  /* Text */
+  --text: #E8EBE9;
+  --text-dim: #8E9793;
+  --text-faint: #5C6360;
 
-  --secondary: #1a1a26;
-  --secondary-foreground: #94a3b8;
+  /* Accent — muted electric green */
+  --accent: #7FE5B0;
+  --accent-dim: #4A9B76;
+  --accent-bg: rgba(127, 229, 176, 0.08);
 
-  --muted: #1e1e2e;
-  --muted-foreground: #64748b;
+  /* Semantic */
+  --danger: #E57373;
+  --danger-bg: rgba(229, 115, 115, 0.08);
+  --warning: #E5C07B;
+  --warning-bg: rgba(229, 192, 123, 0.08);
 
-  --accent: #06b6d4;
-  --accent-foreground: #0c0c12;
+  /* Verdict (kept for backward compat on verdict badges) */
+  --approve: #7FE5B0;
+  --reject: #E57373;
+  --modify: #E5C07B;
+  --pending: #5C6360;
+  --auto-approved: #7FE5B0;
+  --vetoed: #A78BFA;
 
-  /* Verdict colors */
-  --approve: #10b981;
-  --reject: #ef4444;
-  --modify: #f59e0b;
-  --pending: #475569;
+  /* Legacy shadcn-style tokens — kept so nothing breaks, but remapped */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--bg-elev);
+  --card-foreground: var(--text);
+  --popover: var(--bg-elev);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--bg);
+  --secondary: var(--bg-elev-2);
+  --secondary-foreground: var(--text-dim);
+  --muted: var(--bg-elev-2);
+  --muted-foreground: var(--text-faint);
+  --accent-foreground: var(--bg);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--text);
+  --input: var(--bg-elev-2);
+  --ring: var(--accent);
 
-  --destructive: #ef4444;
-  --destructive-foreground: #fff;
-
-  --border: #1e1e2e;
-  --input: #1a1a26;
-  --ring: #06b6d4;
-
-  --radius: 0.25rem;
+  --radius: 0.75rem;
 }
 
 @theme inline {
+  /* Core tokens */
+  --color-bg: var(--bg);
+  --color-bg-elev: var(--bg-elev);
+  --color-bg-elev-2: var(--bg-elev-2);
+  --color-border-default: var(--border);
+  --color-border-soft: var(--border-soft);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-bg: var(--accent-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+
+  /* Verdict colors */
+  --color-approve: var(--approve);
+  --color-reject: var(--reject);
+  --color-modify: var(--modify);
+  --color-pending: var(--pending);
+  --color-auto-approved: var(--auto-approved);
+  --color-vetoed: var(--vetoed);
+
+  /* Legacy shadcn-style mapping */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -55,17 +100,12 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-approve: var(--approve);
-  --color-reject: var(--reject);
-  --color-modify: var(--modify);
-  --color-pending: var(--pending);
+
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 4px);
@@ -74,38 +114,35 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply outline-ring/50;
   }
 
   body {
-    @apply text-foreground;
-    font-family: var(--font-body), 'IBM Plex Sans', system-ui, sans-serif;
-    font-feature-settings: 'rlig' 1, 'calt' 1;
-    background-color: var(--background);
+    color: var(--text);
+    font-family: var(--font-body), 'Geist', system-ui, sans-serif;
+    font-feature-settings: 'rlig' 1, 'calt' 1, 'ss01' 1;
+    background-color: var(--bg);
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display), 'Playfair Display', Georgia, serif;
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-family: var(--font-body), 'Geist', system-ui, sans-serif;
+    font-weight: 500;
+    letter-spacing: -0.025em;
   }
 
   code, .mono {
-    font-family: var(--font-mono), 'JetBrains Mono', 'Courier New', monospace;
+    font-family: var(--font-mono), 'Geist Mono', 'Courier New', monospace;
   }
 }
 
-/* Page background with geometric grid + subtle glow */
+/* Page background — subtle grain, no grid, no cyan glow */
 html {
   min-height: 100vh;
-  background-color: #0c0c12;
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+  background-color: var(--bg);
   background-image:
-    /* Geometric grid */
-    linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px),
-    /* Radial glow at top */
-    radial-gradient(ellipse 70% 40% at 50% 0%, rgba(6, 182, 212, 0.04) 0%, transparent 60%);
-  background-size: 40px 40px, 40px 40px, 100% 100%;
+    radial-gradient(ellipse 70% 40% at 50% 0%, rgba(127, 229, 176, 0.025) 0%, transparent 60%);
   background-attachment: fixed;
 }
 
@@ -123,7 +160,7 @@ body::before {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 0;
-  opacity: 0.4;
+  opacity: 0.35;
 }
 
 main, nav {
@@ -136,13 +173,15 @@ main, nav {
    ======================== */
 @layer utilities {
   .font-mono {
-    font-family: var(--font-mono), 'JetBrains Mono', monospace;
+    font-family: var(--font-mono), 'Geist Mono', monospace;
   }
   .font-display {
-    font-family: var(--font-display), 'Playfair Display', Georgia, serif;
+    font-family: var(--font-body), 'Geist', system-ui, sans-serif;
+    font-weight: 500;
+    letter-spacing: -0.025em;
   }
   .font-body {
-    font-family: var(--font-body), 'IBM Plex Sans', system-ui, sans-serif;
+    font-family: var(--font-body), 'Geist', system-ui, sans-serif;
   }
 }
 
@@ -150,40 +189,26 @@ main, nav {
    VERDICT BADGE ANIMATIONS
    ======================== */
 @keyframes stamp {
-  0% {
-    opacity: 0;
-    transform: scale(0.3) rotate(-8deg);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.08) rotate(1deg);
-  }
-  80% {
-    transform: scale(0.97) rotate(0deg);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) rotate(0deg);
-  }
+  0% { opacity: 0; transform: scale(0.3) rotate(-8deg); }
+  60% { opacity: 1; transform: scale(1.08) rotate(1deg); }
+  80% { transform: scale(0.97) rotate(0deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
 @keyframes verdict-glow-approve {
-  0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), 0 0 60px rgba(16, 185, 129, 0.08); }
-  50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.35), 0 0 80px rgba(16, 185, 129, 0.15); }
+  0%, 100% { box-shadow: 0 0 20px rgba(127, 229, 176, 0.15), 0 0 60px rgba(127, 229, 176, 0.06); }
+  50% { box-shadow: 0 0 30px rgba(127, 229, 176, 0.28), 0 0 80px rgba(127, 229, 176, 0.12); }
 }
 @keyframes verdict-glow-reject {
-  0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.2), 0 0 60px rgba(239, 68, 68, 0.08); }
-  50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.35), 0 0 80px rgba(239, 68, 68, 0.15); }
+  0%, 100% { box-shadow: 0 0 20px rgba(229, 115, 115, 0.15), 0 0 60px rgba(229, 115, 115, 0.06); }
+  50% { box-shadow: 0 0 30px rgba(229, 115, 115, 0.28), 0 0 80px rgba(229, 115, 115, 0.12); }
 }
 @keyframes verdict-glow-modify {
-  0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.2), 0 0 60px rgba(245, 158, 11, 0.08); }
-  50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.35), 0 0 80px rgba(245, 158, 11, 0.15); }
+  0%, 100% { box-shadow: 0 0 20px rgba(229, 192, 123, 0.15), 0 0 60px rgba(229, 192, 123, 0.06); }
+  50% { box-shadow: 0 0 30px rgba(229, 192, 123, 0.28), 0 0 80px rgba(229, 192, 123, 0.12); }
 }
 
-.verdict-stamp {
-  animation: stamp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
+.verdict-stamp { animation: stamp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 .verdict-glow-approve { animation: verdict-glow-approve 3s ease-in-out infinite; }
 .verdict-glow-reject  { animation: verdict-glow-reject 3s ease-in-out infinite; }
 .verdict-glow-modify  { animation: verdict-glow-modify 3s ease-in-out infinite; }
@@ -195,12 +220,12 @@ main, nav {
   0%, 100% {
     opacity: 0.4;
     transform: scale(0.98);
-    box-shadow: 0 0 0px rgba(6, 182, 212, 0);
+    box-shadow: 0 0 0px rgba(127, 229, 176, 0);
   }
   50% {
     opacity: 1;
     transform: scale(1.01);
-    box-shadow: 0 0 40px rgba(6, 182, 212, 0.25), 0 0 80px rgba(6, 182, 212, 0.1);
+    box-shadow: 0 0 40px rgba(127, 229, 176, 0.22), 0 0 80px rgba(127, 229, 176, 0.08);
   }
 }
 
@@ -216,101 +241,108 @@ main, nav {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fade-in {
-  animation: fadeInUp 0.5s ease-out forwards;
-}
+.animate-fade-in { animation: fadeInUp 0.5s ease-out forwards; }
+.animate-slide-up { animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 
-.animate-slide-up {
-  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-/* Score count-up */
 @keyframes scoreReveal {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.score-reveal {
-  animation: scoreReveal 0.4s ease-out 0.7s both;
-}
+.score-reveal { animation: scoreReveal 0.4s ease-out 0.7s both; }
 
-/* Reasoning text reveal */
 @keyframes fadeInSlow {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-.reasoning-reveal {
-  animation: fadeInSlow 0.8s ease-out 1.2s both;
+.reasoning-reveal { animation: fadeInSlow 0.8s ease-out 1.2s both; }
+
+/* Radix Accordion */
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
 }
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+.animate-accordion-down { animation: accordion-down 0.25s ease-out; }
+.animate-accordion-up   { animation: accordion-up 0.25s ease-out; }
 
 /* ========================
    CARDS
    ======================== */
 .gov-card {
-  background: rgba(18, 18, 26, 0.9);
-  border: 1px solid rgba(30, 30, 46, 0.8);
-  border-radius: 2px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .gov-card-hover:hover {
-  border-color: rgba(6, 182, 212, 0.3);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(6, 182, 212, 0.1);
-  transition: all 0.2s ease;
+  background: var(--bg-elev-2);
+  border-color: var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Council accent colors */
-.council-amber  { border-left: 3px solid #f59e0b; }
-.council-blue   { border-left: 3px solid #3b82f6; }
-.council-teal   { border-left: 3px solid #06b6d4; }
-.council-purple { border-left: 3px solid #8b5cf6; }
-.council-slate  { border-left: 3px solid #64748b; }
+/* Program accent borders — semantic, not arbitrary */
+.council-amber  { border-left: 3px solid var(--warning); }
+.council-blue   { border-left: 3px solid var(--text-dim); }
+.council-teal   { border-left: 3px solid var(--accent); }
+.council-purple { border-left: 3px solid var(--vetoed); }
+.council-slate  { border-left: 3px solid var(--text-faint); }
 
 /* Navbar */
 .gov-navbar {
-  background: rgba(12, 12, 18, 0.95);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(30, 30, 46, 0.8);
+  background: rgba(11, 13, 12, 0.85);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-soft);
 }
 
 /* Constitution viewer */
 .constitution-block {
-  background: rgba(10, 10, 16, 0.8);
-  border: 1px solid rgba(30, 30, 46, 0.6);
-  border-left: 3px solid rgba(6, 182, 212, 0.3);
+  background: rgba(8, 10, 9, 0.8);
+  border-top: 1px solid var(--border-soft);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
   font-family: var(--font-mono), monospace;
   font-size: 0.8rem;
-  line-height: 1.7;
-  color: #94a3b8;
+  line-height: 1.75;
+  color: var(--text-dim);
 }
 
 /* Input styling */
 .gov-input {
-  background: rgba(26, 26, 38, 0.8);
-  border: 1px solid rgba(30, 30, 46, 0.8);
-  color: #e2e8f0;
-  border-radius: 2px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
   font-family: var(--font-body), sans-serif;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .gov-input:focus {
   outline: none;
-  border-color: rgba(6, 182, 212, 0.5);
-  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.1);
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 0 2px var(--accent-bg);
 }
 
-/* Brand card (legacy compat) */
+.gov-input::placeholder {
+  color: var(--text-faint);
+}
+
+/* Brand card */
 .brand-card {
-  background: rgba(18, 18, 26, 0.9);
-  border: 1px solid rgba(30, 30, 46, 0.8);
-  border-radius: 2px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
 }
 
 /* Reown AppKit */
 w3m-legal-footer, [data-testid="w3m-legal-footer"], wcm-legal-footer { display: none !important; }
 w3m-modal, wcm-modal, w3m-router, wcm-router, w3m-modal-content, wcm-modal-content {
-  --w3m-border-radius-master: 2px !important;
+  --w3m-border-radius-master: 12px !important;
 }
 w3m-modal, wcm-modal {
-  --w3m-background: rgba(12, 12, 18, 0.98) !important;
+  --w3m-background: rgba(11, 13, 12, 0.98) !important;
 }

@@ -35,11 +35,11 @@ export function AlignmentScore({ score, evaluated }: AlignmentScoreProps) {
       >
         {evaluated ? displayed : "—"}
       </div>
-      <div className="text-xs text-slate-500 font-mono uppercase tracking-widest">
+      <div className="text-xs text-text-faint font-mono tracking-widest">
         / 10 alignment
       </div>
       {evaluated && (
-        <div className="w-full h-1 bg-slate-800 mt-1" style={{ maxWidth: "120px" }}>
+        <div className="w-full h-1 bg-border-soft mt-1" style={{ maxWidth: "120px" }}>
           <div
             className="h-full transition-all duration-1000 ease-out"
             style={{ width: `${(score / 10) * 100}%`, backgroundColor: color }}

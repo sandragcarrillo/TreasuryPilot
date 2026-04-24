@@ -52,11 +52,11 @@ export function EvaluationOverlay({ visible }: EvaluationOverlayProps) {
         </div>
 
         <div className="space-y-3">
-          <div className="text-xs text-slate-500 font-mono uppercase tracking-[0.2em]">
+          <div className="text-xs text-text-faint font-mono tracking-[0.2em]">
             AI Validators Reaching Consensus
           </div>
           <div
-            className="text-slate-300 font-body text-sm transition-all duration-500"
+            className="text-text font-body text-sm transition-all duration-500"
             key={msgIndex}
             style={{ animation: "fadeInSlow 0.5s ease-out forwards" }}
           >
@@ -68,13 +68,13 @@ export function EvaluationOverlay({ visible }: EvaluationOverlayProps) {
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="w-1.5 h-1.5 rounded-full bg-cyan-500 deliberation-pulse"
+              className="w-1.5 h-1.5 rounded-full bg-accent deliberation-pulse"
               style={{ animationDelay: `${i * 0.3}s` }}
             />
           ))}
         </div>
 
-        <p className="text-xs text-slate-600 font-mono">
+        <p className="text-xs text-text-faint font-mono">
           This may take several minutes while validators deliberate.
         </p>
       </div>

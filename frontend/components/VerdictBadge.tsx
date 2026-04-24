@@ -8,50 +8,49 @@ type Status = Proposal["status"];
 
 const VERDICT_CONFIG: Record<string, { label: string; color: string; glowClass: string; border: string; bg: string }> = {
   approve: {
-    label: "APPROVED",
-    color: "#10b981",
+    label: "Approved",
+    color: "#7FE5B0",
     glowClass: "verdict-glow-approve",
-    border: "border-emerald-500/60",
-    bg: "bg-emerald-950/40",
+    border: "border-accent/50",
+    bg: "bg-accent/10",
   },
   reject: {
-    label: "REJECTED",
-    color: "#ef4444",
+    label: "Rejected",
+    color: "#E57373",
     glowClass: "verdict-glow-reject",
-    border: "border-red-500/60",
-    bg: "bg-red-950/40",
+    border: "border-danger/50",
+    bg: "bg-danger/10",
   },
   modify: {
-    label: "MODIFY",
-    color: "#f59e0b",
+    label: "Modify",
+    color: "#E5C07B",
     glowClass: "verdict-glow-modify",
-    border: "border-amber-500/60",
-    bg: "bg-amber-950/40",
+    border: "border-warning/50",
+    bg: "bg-warning/10",
   },
   pending: {
-    label: "PENDING",
-    color: "#475569",
+    label: "Pending",
+    color: "#5C6360",
     glowClass: "",
-    border: "border-slate-600/40",
-    bg: "bg-slate-900/40",
+    border: "border-border-soft",
+    bg: "bg-bg-elev-2/40",
   },
   auto_approved: {
-    label: "AUTO-APPROVED",
-    color: "#06b6d4",
+    label: "Auto-approved",
+    color: "#7FE5B0",
     glowClass: "",
-    border: "border-cyan-500/60",
-    bg: "bg-cyan-950/40",
+    border: "border-accent/50",
+    bg: "bg-accent/8",
   },
   vetoed: {
-    label: "VETOED",
-    color: "#a78bfa",
+    label: "Vetoed",
+    color: "#A78BFA",
     glowClass: "",
-    border: "border-purple-500/60",
-    bg: "bg-purple-950/40",
+    border: "border-vetoed/50",
+    bg: "bg-vetoed/10",
   },
 };
 
-/** Pick the right verdict key: status overrides recommendation for special cases */
 function getVerdictKey(recommendation: Recommendation, status?: Status): string {
   if (status === "vetoed") return "vetoed";
   if (status === "auto_approved") return "auto_approved";
@@ -78,7 +77,7 @@ export function VerdictBadge({ recommendation, status, size = "lg", animate = tr
   if (size === "sm") {
     return (
       <span
-        className={`inline-flex items-center px-2.5 py-0.5 border font-mono text-xs font-bold tracking-widest uppercase ${config.border} ${config.bg}`}
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] font-medium ${config.border} ${config.bg}`}
         style={{ color: config.color }}
       >
         {config.label}
@@ -91,8 +90,8 @@ export function VerdictBadge({ recommendation, status, size = "lg", animate = tr
       <div
         className={`
           relative inline-flex items-center justify-center
-          px-10 py-5 border-2
-          font-mono font-black tracking-[0.25em] uppercase
+          px-10 py-5 rounded-2xl border-2
+          font-medium tracking-tight
           text-3xl md:text-4xl
           ${config.border} ${config.bg}
           ${config.glowClass}
@@ -100,7 +99,6 @@ export function VerdictBadge({ recommendation, status, size = "lg", animate = tr
         `}
         style={{ color: config.color }}
       >
-        {/* Corner marks */}
         <span className="absolute top-1.5 left-1.5 w-3 h-3 border-t-2 border-l-2" style={{ borderColor: config.color }} />
         <span className="absolute top-1.5 right-1.5 w-3 h-3 border-t-2 border-r-2" style={{ borderColor: config.color }} />
         <span className="absolute bottom-1.5 left-1.5 w-3 h-3 border-b-2 border-l-2" style={{ borderColor: config.color }} />
@@ -108,7 +106,7 @@ export function VerdictBadge({ recommendation, status, size = "lg", animate = tr
         {config.label}
       </div>
       {key === "pending" && (
-        <p className="text-xs text-slate-500 tracking-wider uppercase font-mono">Awaiting evaluation</p>
+        <p className="text-[11px] text-text-faint">Awaiting evaluation</p>
       )}
     </div>
   );

@@ -1,34 +1,75 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AccountPanel } from "./AccountPanel";
 import { useWallet } from "@/lib/genlayer/wallet";
 
+interface NavLinkProps {
+  href: string;
+  label: string;
+  isActive: boolean;
+}
+
+function NavLink({ href, label, isActive }: NavLinkProps) {
+  return (
+    <Link
+      href={href}
+      className={`text-[11px] font-mono tracking-[0.2em] transition-colors ${
+        isActive
+          ? "text-accent"
+          : "text-text-dim hover:text-text"
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
+
 export function Navbar() {
   const { isConnected } = useWallet();
+  const pathname = usePathname() ?? "/";
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
-    <nav className="gov-navbar fixed top-0 left-0 right-0 z-30 h-14">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 h-full flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <img src="/logo.svg" alt="TreasuryPilot" className="w-9 h-9 opacity-80 group-hover:opacity-100 transition-opacity" />
-          <span className="font-mono text-slate-300 text-sm tracking-[0.12em] uppercase group-hover:text-slate-100 transition-colors">
-            TreasuryPilot
-          </span>
-        </Link>
+    <nav className="gov-navbar fixed top-0 left-0 right-0 z-30 h-18">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 h-full grid grid-cols-[1fr_auto_1fr] items-center gap-6">
+        {/* Left — Logo */}
+        <div className="justify-self-start">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <img
+              src="/logo.svg"
+              alt="Treasury Pilot"
+              className="w-9 h-9 opacity-90 group-hover:opacity-100 transition-opacity"
+            />
+            <span className="text-base font-medium text-text group-hover:text-accent transition-colors tracking-tight">
+              Treasury Pilot
+            </span>
+          </Link>
+        </div>
 
-        <div className="flex items-center gap-5">
+        {/* Center — Page links */}
+        <div className="hidden md:flex items-center gap-8 justify-self-center">
+          <NavLink
+            href="/organizations"
+            label="Organizations"
+            isActive={isActive("/organizations")}
+          />
           {isConnected && (
-            <Link
+            <NavLink
               href="/dashboard"
-              className="hidden md:block text-xs font-mono text-cyan-500 hover:text-cyan-400 tracking-widest uppercase transition-colors"
-            >
-              Dashboard
-            </Link>
+              label="Dashboard"
+              isActive={isActive("/dashboard")}
+            />
           )}
-          <span className="hidden md:block text-[10px] font-mono text-slate-700/60 tracking-widest uppercase">
-            GenLayer Studio
-          </span>
+        </div>
+
+        {/* Right — Account */}
+        <div className="justify-self-end">
           <AccountPanel />
         </div>
       </div>
