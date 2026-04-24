@@ -220,7 +220,7 @@ function ActionCluster({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="flex items-center h-9 px-3 rounded-xl text-[11px] text-text-dim border border-border">
+      <span className="flex items-center h-9 px-3 rounded-xl text-[11px] text-text-dim border border-border-soft">
         {proposalCount} {proposalCount === 1 ? "proposal" : "proposals"}
       </span>
       {canManage && (

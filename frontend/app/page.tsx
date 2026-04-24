@@ -1,26 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import * as Accordion from "@radix-ui/react-accordion";
 import {
-  Plus,
   Building2,
   Sparkles,
   ArrowRight,
-  Check,
   ChevronDown,
-  ExternalLink,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { CreateDAOModal } from "@/components/CreateDAOModal";
-import { OrgCard } from "@/components/OrgCard";
-import { useOrgs } from "@/lib/hooks/useTreasuryPilot";
 
 export default function HomePage() {
-  const [showCreate, setShowCreate] = useState(false);
-  const { data: orgs = [], isLoading, refetch } = useOrgs();
-
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -28,53 +18,10 @@ export default function HomePage() {
       <main className="grow pt-18 pb-0 px-4 md:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <Hero />
-
-          {/* Registry kept at current position */}
-          <section className="mt-12 space-y-6 animate-slide-up" style={{ animationDelay: "150ms" }}>
-            <div className="flex items-end justify-between border-b border-border-soft pb-4">
-              <h2 className="text-[11px] font-mono tracking-[0.25em] text-text-faint">
-                Organization Registry
-              </h2>
-              <button
-                onClick={() => setShowCreate(true)}
-                className="flex items-center gap-2 h-9 px-4 rounded-xl text-[11px] font-mono tracking-[0.2em] text-accent border border-accent/40 hover:bg-accent/10 hover:border-accent/70 transition-all"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Register Organization
-              </button>
-            </div>
-
-            {isLoading ? (
-              <div className="gov-card p-16 flex items-center justify-center">
-                <span className="font-mono text-sm text-text-faint tracking-widest">Loading…</span>
-              </div>
-            ) : orgs.length === 0 ? (
-              <EmptyRegistry onCreate={() => setShowCreate(true)} />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {orgs.slice(0, 6).map((org, i) => (
-                  <OrgCard key={org.id} org={org} animationDelay={i * 60} />
-                ))}
-              </div>
-            )}
-
-            {orgs.length > 6 && (
-              <div className="flex justify-center pt-2">
-                <Link
-                  href="/organizations"
-                  className="text-[11px] font-mono tracking-[0.2em] text-accent hover:text-accent/80 transition-colors"
-                >
-                  View all {orgs.length} organizations →
-                </Link>
-              </div>
-            )}
-          </section>
-
           <Problem />
           <HowItWorks />
           <HowItWorksForUsers />
           <TrustMoment />
-          <Pricing />
           <FAQ />
           <FinalCTA />
         </div>
@@ -93,13 +40,6 @@ export default function HomePage() {
           </a>
         </div>
       </footer>
-
-      {showCreate && (
-        <CreateDAOModal
-          onClose={() => setShowCreate(false)}
-          onSuccess={() => refetch()}
-        />
-      )}
     </div>
   );
 }
@@ -111,30 +51,24 @@ function Hero() {
     <section className="py-24 md:py-32 animate-fade-in">
       <div className="max-w-4xl">
         <div className="text-[11px] font-mono text-accent tracking-[0.3em] mb-8">
-          Governance infrastructure for DAOs
+          Governance infrastructure for grants programs
         </div>
         <h1 className="text-5xl md:text-7xl text-text font-semibold leading-[0.95] tracking-tight mb-6">
-          AI evaluation for DAO grants.
+          AI evaluation for grants programs.
         </h1>
-        <p className="text-2xl md:text-3xl font-medium text-text-dim leading-tight mb-8 tracking-tight">
-          On-chain reasoning your delegates can defend.
-        </p>
         <p className="text-base md:text-lg text-text-dim leading-relaxed max-w-2xl mb-10">
-          Treasury Pilot evaluates every grant proposal against your DAO&apos;s on-chain
-          constitution using consensus from multiple AI validators. Every decision
-          comes with public reasoning your community can audit.
+          Treasury Pilot evaluates every grant proposal against your
+          organization&apos;s constitution using consensus from multiple AI
+          validators. Every decision comes with public reasoning your
+          community can audit.
         </p>
-
-        <div className="text-[11px] font-mono text-text-faint tracking-[0.2em] mb-4">
-          Live pilot with Rootstock Collective
-        </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <Link
-            href="/dashboard"
+            href="/organizations"
             className="inline-flex items-center gap-2 h-11 px-6 rounded-xl text-sm font-medium bg-accent text-bg hover:bg-accent/90 transition-colors"
           >
-            Try the Playground
+            Browse organizations
             <ArrowRight className="w-4 h-4" />
           </Link>
           <a
@@ -153,10 +87,26 @@ function Hero() {
 
 function Problem() {
   const lines = [
-    { emphasis: "days", text: "Reviews take", tail: "because every delegate reads from scratch." },
-    { emphasis: "inconsistent", text: "Decisions are", tail: "because no two delegates apply the same rubric." },
-    { emphasis: "disappear", text: "Approved grants", tail: "into a black hole until someone asks for a report." },
-    { emphasis: "no memory", text: "There's", tail: "between proposals — every decision starts blank." },
+    {
+      emphasis: "days",
+      text: "Reviews take",
+      tail: "because every team member or delegate reads from scratch.",
+    },
+    {
+      emphasis: "inconsistent",
+      text: "Decisions are",
+      tail: "because no two team members or delegates apply the same rubric.",
+    },
+    {
+      emphasis: "disappear",
+      text: "Approved grants",
+      tail: "into a black hole until someone asks for a report.",
+    },
+    {
+      emphasis: "no memory",
+      text: "There's",
+      tail: "between proposals. Every decision starts blank.",
+    },
   ];
 
   return (
@@ -166,7 +116,7 @@ function Problem() {
           The problem
         </div>
         <h2 className="text-4xl md:text-5xl text-text font-semibold leading-tight tracking-tight mb-12">
-          Grant review is broken in every DAO.
+          Grant review is broken in every grants program.
         </h2>
 
         <div className="divide-y divide-border-soft">
@@ -179,7 +129,7 @@ function Problem() {
           ))}
         </div>
 
-        <p className="mt-10 text-[11px] font-mono text-text-faint tracking-[0.2em]">
+        <p className="mt-12 text-2xl md:text-3xl text-accent font-semibold tracking-tight">
           Treasury Pilot fixes all four.
         </p>
       </div>
@@ -206,20 +156,20 @@ function HowItWorks() {
         <div className="flex flex-col gap-6">
           <HowStep
             n="01"
-            title="Define your constitution on-chain"
-            body="Your DAO's mission, grant programs, evaluation criteria, and red flags become a structured document published on-chain. One source of truth. Versioned. Auditable. Every evaluation references this document."
+            title="Define your constitution"
+            body="Your organization's mission, grant programs, evaluation criteria, and red flags become a structured document. One source of truth. Every evaluation references this document."
             visual={<ConstitutionVisual />}
           />
           <HowStep
             n="02"
             title="Multiple AI validators reach consensus"
-            body="Not one model deciding alone. Multiple validators evaluate independently, then agree on alignment, risk, and recommendation. If they disagree, that disagreement surfaces — you see exactly where the uncertainty is."
+            body="Not one model deciding alone. Multiple validators evaluate independently, then agree on alignment, risk, and recommendation. If they disagree, that disagreement surfaces so you see exactly where the uncertainty is."
             visual={<ConsensusVisual />}
           />
           <HowStep
             n="03"
-            title="Your delegates decide. Always."
-            body="Treasury Pilot is advisory infrastructure, never the decision-maker. Your delegates see the AI's recommendation with full reasoning, similar past proposals, and risk assessment — then they vote. Auto-approval is opt-in, with veto windows for safety."
+            title="Your delegates/team members decide. Always."
+            body="Treasury Pilot is advisory infrastructure, never the decision-maker. Your delegates/team members see the AI's recommendation with full reasoning, similar past proposals, and risk assessment, then they vote. Auto-approval is opt-in, with veto windows for safety."
             visual={<DelegateVisual />}
           />
         </div>
@@ -240,7 +190,7 @@ function HowStep({
   visual: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl bg-bg-elev border border-border p-8 md:p-10 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-10 items-center">
+    <div className="rounded-2xl bg-bg-elev border border-border-soft p-8 md:p-10 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-10 items-center">
       <div>
         <div className="font-mono text-accent text-5xl md:text-6xl mb-6 tracking-tight">
           {n}
@@ -272,9 +222,6 @@ function ConstitutionVisual() {
           {label}
         </div>
       ))}
-      <div className="font-mono text-[10px] text-text-faint pt-2 truncate">
-        0xa477…f3 · Studio
-      </div>
     </div>
   );
 }
@@ -317,7 +264,7 @@ function DelegateVisual() {
         <span className="font-mono text-[10px] text-text-faint">8.2/10</span>
       </div>
       <div className="border-t border-border-soft pt-3 space-y-2">
-        <div className="font-mono text-[10px] text-text-faint">Delegate vote</div>
+        <div className="font-mono text-[10px] text-text-faint">Your vote</div>
         <div className="flex gap-2">
           <div className="flex-1 h-8 rounded-md bg-accent text-bg text-xs font-medium flex items-center justify-center">
             Approve
@@ -331,7 +278,7 @@ function DelegateVisual() {
   );
 }
 
-// ─── Built for both sides (kept) ─────────────────────────────────────────────
+// ─── Built for both sides ────────────────────────────────────────────────────
 
 function HowItWorksForUsers() {
   const personas = [
@@ -340,7 +287,7 @@ function HowItWorksForUsers() {
       eyebrow: "For organizations",
       title: "Run your grants program with AI oversight",
       steps: [
-        "Register your organization and publish your constitution on-chain.",
+        "Register your organization and publish your constitution.",
         "Configure auto-approval thresholds, veto windows, and invite admins.",
         "Watch proposals get AI-evaluated against your mission and programs.",
         "Track approved grants, review progress reports, and measure ROI.",
@@ -407,7 +354,7 @@ function HowItWorksForUsers() {
   );
 }
 
-// ─── Trust moment ────────────────────────────────────────────────────────────
+// ─── Trust moment (generic example) ──────────────────────────────────────────
 
 function TrustMoment() {
   return (
@@ -423,13 +370,13 @@ function TrustMoment() {
           Public. Auditable. Defendable.
         </p>
 
-        <div className="rounded-2xl bg-bg-elev border border-border p-8 md:p-10 max-w-4xl mx-auto space-y-8">
+        <div className="rounded-2xl bg-bg-elev border border-border-soft p-8 md:p-10 max-w-4xl mx-auto space-y-8">
           {/* Top meta */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-soft pb-5">
             <div className="flex items-center gap-3 text-[11px] font-mono text-text-faint tracking-wider">
-              <span>RSK-001</span>
+              <span>Proposal № 042</span>
               <span className="text-text-faint/40">·</span>
-              <span>Rootstock Collective</span>
+              <span>Education Program</span>
             </div>
             <span className="text-[11px] font-mono text-accent border border-accent/40 bg-accent/10 rounded-full px-3 py-1">
               Approved
@@ -438,7 +385,7 @@ function TrustMoment() {
 
           {/* Title */}
           <h3 className="text-2xl md:text-3xl font-semibold text-text tracking-tight leading-snug">
-            Multi-asset lending protocol on Rootstock
+            Community workshop series on grant writing
           </h3>
 
           {/* Scores */}
@@ -467,23 +414,24 @@ function TrustMoment() {
             </div>
             <div className="space-y-4 text-sm md:text-base text-text-dim leading-relaxed">
               <p>
-                The proposal builds a multi-asset lending protocol{" "}
-                <ReasonHighlight>natively on Rootstock</ReasonHighlight>, leveraging
-                rBTC as primary collateral. This directly advances the mission of
-                strengthening Bitcoin&apos;s DeFi layer and satisfies ecosystem
-                alignment.
+                The proposal directly serves the organization&apos;s mission of{" "}
+                <ReasonHighlight>accessible grant education</ReasonHighlight> and
+                targets an audience the Education Program was established to reach.
+                Scope is well defined with concrete deliverables and a
+                milestone-based timeline.
               </p>
               <p>
-                The team has prior contributions to the Rootstock ecosystem with{" "}
-                <ReasonHighlight>verifiable history</ReasonHighlight>. Budget of $75k
-                is <ReasonHighlight>proportional</ReasonHighlight> to a 6-month
-                milestone-based delivery with smart contract audits included.
+                The team has prior contributions in the ecosystem with{" "}
+                <ReasonHighlight>verifiable history</ReasonHighlight>. The requested
+                budget is <ReasonHighlight>proportional</ReasonHighlight> to the
+                scope of work and fits comfortably within the program&apos;s
+                remaining budget.
               </p>
               <p>
                 Risk is <ReasonHighlight>low</ReasonHighlight> given the team&apos;s
-                track record and conservative initial LTV parameters. Could benefit
-                from more specific KPIs around TVL targets — consider requesting
-                clarification before final vote.
+                track record and the modest scope. Could benefit from more specific
+                KPIs around workshop attendance and post-workshop outcomes. Consider
+                requesting clarification before final vote.
               </p>
             </div>
           </div>
@@ -491,15 +439,7 @@ function TrustMoment() {
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-border-soft pt-5 text-[11px] font-mono">
             <span className="text-text-faint">3 validators · 98% consensus</span>
-            <a
-              href="https://explorer-studio.genlayer.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent hover:text-accent/80 transition-colors inline-flex items-center gap-1"
-            >
-              View on GenLayer Studio
-              <ExternalLink className="w-3 h-3" />
-            </a>
+            <span className="text-text-faint">Published on-chain</span>
           </div>
         </div>
 
@@ -526,154 +466,39 @@ function ReasonHighlight({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── Pricing ─────────────────────────────────────────────────────────────────
-
-function Pricing() {
-  const tiers = [
-    {
-      name: "Starter",
-      price: "$199",
-      tagline: "For DAOs experimenting with AI grants review.",
-      highlighted: false,
-      features: [
-        "Up to 10 proposals/month",
-        "2 admin seats",
-        "Telegram bot included",
-        "Community support",
-      ],
-    },
-    {
-      name: "Growth · Popular",
-      price: "$799",
-      tagline: "For active DAOs running real grants programs.",
-      highlighted: true,
-      features: [
-        "Up to 50 proposals/month",
-        "10 admin seats",
-        "Discourse + Snapshot integration",
-        "ROI tracking + progress reports",
-        "Priority support",
-      ],
-    },
-    {
-      name: "Scale",
-      price: "$2,499",
-      tagline: "For multi-program DAOs with sophisticated governance.",
-      highlighted: false,
-      features: [
-        "Up to 200 proposals/month",
-        "Unlimited admins",
-        "Cross-chain mode (LayerZero)",
-        "SLA 99.5%",
-        "Dedicated support",
-      ],
-    },
-  ];
-
-  return (
-    <section className="py-32 border-t border-border-soft">
-      <div className="max-w-6xl">
-        <div className="text-[11px] font-mono text-accent tracking-[0.3em] mb-6">
-          Pricing
-        </div>
-        <h2 className="text-4xl md:text-5xl text-text font-semibold leading-tight tracking-tight mb-4">
-          Pay for what fits your DAO.
-        </h2>
-        <p className="text-2xl md:text-2xl font-medium text-text-dim leading-tight tracking-tight mb-12">
-          Start with a pilot. Scale when it works.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {tiers.map((t) => (
-            <div
-              key={t.name}
-              className={`rounded-2xl bg-bg-elev p-8 flex flex-col gap-6 ${
-                t.highlighted
-                  ? "border border-accent/60"
-                  : "border border-border-soft"
-              }`}
-            >
-              <div className="space-y-2">
-                <div className="text-[11px] font-mono text-accent tracking-[0.25em]">
-                  {t.name}
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-4xl md:text-5xl font-semibold text-text tracking-tight">
-                    {t.price}
-                  </span>
-                  <span className="text-text-dim text-base">/month</span>
-                </div>
-                <p className="text-sm text-text-dim leading-relaxed pt-1">
-                  {t.tagline}
-                </p>
-              </div>
-              <ul className="space-y-3 pt-4 border-t border-border-soft">
-                {t.features.map((f) => (
-                  <li key={f} className="flex gap-2.5 text-sm text-text-dim items-start">
-                    <Check className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-                    <span className="leading-relaxed">{f}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-center text-sm text-text-dim mt-10">
-          Need something custom?{" "}
-          <a
-            href="mailto:hello@treasurypilot.xyz"
-            className="text-accent hover:text-accent/80 transition-colors"
-          >
-            Talk to us →
-          </a>
-        </p>
-      </div>
-    </section>
-  );
-}
-
 // ─── FAQ ─────────────────────────────────────────────────────────────────────
 
 function FAQ() {
   const items = [
     {
       q: "What if the AI is wrong?",
-      a: "That's why Treasury Pilot is advisory, not binding. Your delegates always make the final call. The AI's job is to surface analysis and flag issues — the decision and the responsibility stay human. We also publish every evaluation's reasoning publicly so disagreements can be debated with the actual logic on the table.",
+      a: "That's why Treasury Pilot is advisory, not binding. Your team members or delegates always make the final call. The AI's job is to surface analysis and flag issues. The decision and the responsibility stay human. We also publish every evaluation's reasoning publicly so disagreements can be debated with the actual logic on the table.",
     },
     {
       q: "Which AI model do you use?",
       a: "Treasury Pilot runs on GenLayer, which uses multiple LLM validators that must reach consensus on each evaluation. Rather than one model deciding alone, several models evaluate independently and either agree or surface disagreement. Currently this is powered by frontier models (Claude, GPT-4 class). The specific models can be audited per evaluation.",
     },
     {
-      q: "Is the AI evaluation binding on the DAO?",
-      a: "No. By default, AI evaluations are recommendations. DAOs can opt into auto-approval for small grants under a threshold (with a veto window for delegates to override), but this is a deliberate choice each DAO makes in their settings. You can run Treasury Pilot in shadow mode for as long as you want.",
+      q: "Is the AI evaluation binding on the organization?",
+      a: "No. By default, AI evaluations are recommendations. Organizations can opt into auto-approval for small grants under a threshold (with a veto window for team members or delegates to override), but this is a deliberate choice each organization makes in their settings. You can run Treasury Pilot in shadow mode for as long as you want.",
     },
     {
-      q: "What happens to data my DAO submits?",
-      a: "Your constitution and evaluation results live on-chain and are public. Your DAO controls who has admin access. Treasury Pilot doesn't sell, share, or use your data for anything beyond running your evaluations.",
+      q: "What happens to data my organization submits?",
+      a: "Your constitution and evaluation results live on-chain and are public. Your organization controls who has admin access. Treasury Pilot doesn't sell, share, or use your data for anything beyond running your evaluations.",
     },
     {
-      q: "How does this compare to Snapshot or Tally?",
-      a: "Snapshot and Tally handle voting infrastructure — they don't evaluate proposals. Treasury Pilot sits before voting: ingests proposals, runs AI evaluation, and surfaces the analysis your delegates use to vote on Snapshot/Tally. We integrate with both rather than replace them.",
-    },
-    {
-      q: "Can I use Treasury Pilot without my DAO being on-chain?",
+      q: "Can I use Treasury Pilot without my organization being on-chain?",
       a: "Yes. The constitution and evaluations can live on GenLayer regardless of where your governance happens today. You can run Treasury Pilot as an evaluation layer that posts results back to your forum (Discourse, Commonwealth, etc.) without changing your existing voting setup.",
     },
     {
-      q: "How long does setup take?",
-      a: "For a standard pilot: about a week. We model your constitution from your existing docs, calibrate the AI against past proposals, and integrate with your forum. Then you run in shadow mode for as long as you want before going live.",
-    },
-    {
       q: "What's GenLayer?",
-      a: "GenLayer is the underlying infrastructure that runs the AI consensus. Your delegates and proposers don't need to know it exists or hold any GenLayer tokens. We handle that. Think of it like Stripe for payments — infrastructure, invisible to your users.",
+      a: "GenLayer is the underlying infrastructure that runs the AI consensus. Your team members, delegates, and proposers don't need to know it exists or hold any GenLayer tokens. We handle that. Think of it like Stripe for payments: infrastructure, invisible to your users.",
     },
   ];
 
   return (
     <section className="py-32 border-t border-border-soft">
-      <div className="max-w-3xl">
+      <div className="max-w-3xl mx-auto text-center">
         <div className="text-[11px] font-mono text-accent tracking-[0.3em] mb-6">
           FAQ
         </div>
@@ -684,7 +509,7 @@ function FAQ() {
         <Accordion.Root
           type="single"
           collapsible
-          className="divide-y divide-border-soft border-y border-border-soft"
+          className="divide-y divide-border-soft border-y border-border-soft text-left"
         >
           {items.map((item, i) => (
             <Accordion.Item key={i} value={`item-${i}`}>
@@ -714,55 +539,22 @@ function FinalCTA() {
     <section className="py-40 border-t border-border-soft">
       <div className="max-w-3xl mx-auto text-center">
         <h2 className="text-4xl md:text-5xl text-text font-semibold leading-tight tracking-tight mb-5">
-          Ready to evaluate your DAO&apos;s grants better?
+          Ready to evaluate your grants programs better?
         </h2>
         <p className="text-2xl md:text-2xl font-medium text-text-dim leading-tight tracking-tight mb-10">
           Start with a pilot. We&apos;ll walk you through it.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a
-            href="mailto:hello@treasurypilot.xyz"
+        <div className="flex items-center justify-center">
+          <Link
+            href="/organizations"
             className="inline-flex items-center gap-2 h-12 px-8 rounded-xl text-base font-medium bg-accent text-bg hover:bg-accent/90 transition-colors"
           >
-            Book a call
+            Start
             <ArrowRight className="w-4 h-4" />
-          </a>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 h-12 px-8 rounded-xl text-base font-medium text-text-dim border border-border-soft hover:border-border hover:text-text transition-all"
-          >
-            Try the Playground
           </Link>
         </div>
-
-        <p className="text-[11px] font-mono text-text-faint tracking-[0.2em] mt-8">
-          Live pilot with Rootstock Collective · More DAOs onboarding
-        </p>
       </div>
     </section>
-  );
-}
-
-// ─── Empty state ─────────────────────────────────────────────────────────────
-
-function EmptyRegistry({ onCreate }: { onCreate: () => void }) {
-  return (
-    <div className="gov-card p-20 flex flex-col items-center gap-6 text-center">
-      <div className="font-mono text-6xl text-accent/50 leading-none tracking-tight">∅</div>
-      <div className="space-y-2 max-w-md">
-        <p className="text-2xl text-text font-medium tracking-tight">Start something.</p>
-        <p className="text-sm text-text-dim leading-relaxed">
-          No organizations yet. Create the first one and define how AI
-          evaluates proposals against your mission.
-        </p>
-      </div>
-      <button
-        onClick={onCreate}
-        className="px-6 py-2.5 rounded-xl text-[11px] font-mono tracking-[0.2em] text-accent border border-accent/40 hover:bg-accent/10 hover:border-accent/70 transition-all"
-      >
-        Register First Organization
-      </button>
-    </div>
   );
 }

@@ -12,25 +12,49 @@ interface CreateOrgModalProps {
 
 const PLACEHOLDER_CONSTITUTION = `This organization manages a grants program dedicated to [your mission].
 
-MISSION: [Describe the organization's core purpose]
+MISSION: [Describe the organization's core purpose in 2-3 sentences. Be specific about who you serve and what success looks like.]
 
 GRANT PROGRAMS:
 
-- [Program Name]: budget $[X] USD, focus on [description].
-- [Program Name]: budget $[X] USD, focus on [description].
+Program 1: [Program name]
+- Type: [one-off grant / recurring rewards / both]
+- Annual budget: $[X] USD
+- Typical grant size: $[X] – $[X] USD
+- Focus: [What this program funds. Be specific. Bad: "tooling". Good: "developer tooling that reduces friction for new builders shipping on Rootstock — SDKs, debuggers, deployment helpers, documentation generators."]
+- Out of scope: [What this program explicitly does NOT fund, even if mission-aligned. Example: "marketing campaigns, conferences, general operational expenses, hiring."]
+
+Program 2: [Program name]
+- Type: [one-off grant / recurring rewards / both]
+- Annual budget: $[X] USD
+- Typical grant size: $[X] – $[X] USD
+- Focus: [Specific description of what this program funds.]
+- Out of scope: [What this program does NOT fund.]
 
 ALLOCATION RULES:
 1. Maximum single grant: $[X] USD
 2. Proposals must target a specific program
 3. All recipients must have prior relevant contributions
+4. Budget must be broken down by milestone, not lump-sum
+
+MUST HAVE (rejection if missing):
+- [Hard requirement specific to your ecosystem]
+- [Hard requirement about deliverables or measurability]
+- [Hard requirement about team or track record]
+
+SHOULD HAVE (raises alignment score):
+- [Strong preference]
+- [Strong preference]
 
 RISK GUIDELINES:
 - Reject proposals without clear deliverables and timelines
+- Reject vague milestones (e.g., "build community", "iterative delivery")
+- Reject when more than 70% of budget goes to team compensation
 - Prefer milestone-based payment structures
 
 ALIGNMENT CRITERIA:
 - Must serve [community] directly
-- Must include measurable KPIs and success metrics`;
+- Must include measurable KPIs and success metrics
+- Projects with no [your ecosystem]-specific value are deprioritized`;
 
 export function CreateDAOModal({ onClose, onSuccess }: CreateOrgModalProps) {
   const [name, setName] = useState("");
@@ -127,8 +151,8 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateOrgModalProps) {
               Include your mission, grant programs with budgets, allocation rules, and alignment criteria.
             </p>
             <textarea
-              className="gov-input w-full px-4 py-3 text-sm font-mono resize-none"
-              rows={14}
+              className="gov-input w-full px-4 py-3 text-sm font-mono resize-y min-h-80"
+              rows={20}
               placeholder={PLACEHOLDER_CONSTITUTION}
               value={constitution}
               onChange={(e) => setConstitution(e.target.value)}
