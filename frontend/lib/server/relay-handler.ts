@@ -1,6 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
-import { verifyAuth, type AuthClaim } from "./auth";
+import { verifyAuth, markAuthConsumed, type AuthClaim } from "./auth";
 import { verifyOrChallenge } from "./x402/verifier";
 import type { RouteId } from "./x402/config";
 
@@ -94,6 +94,14 @@ export async function handleRelay<TData, TResult>(
       { status: 502 }
     );
   }
+
+  // Mark nonce consumed only on full success — so the client can retry the same
+  // auth signature after a 402 challenge with a payment header.
+  await markAuthConsumed(
+    authResult.data.nonce,
+    authResult.data.actorAddress,
+    authResult.data.action
+  );
 
   return NextResponse.json({
     ok: true,

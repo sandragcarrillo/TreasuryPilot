@@ -36,6 +36,10 @@ export const BASE_CONFIG = {
     ? "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     : "0x036CbD53842c5426634e7929541eC2318f3dCF7e") as `0x${string}`,
   usdcDecimals: USDC_DECIMALS,
+  // EIP-712 domain values from the USDC contract's name()/version().
+  // These differ between Base mainnet ("USD Coin") and Base Sepolia ("USDC").
+  usdcDomainName: NETWORK_MODE === "mainnet" ? "USD Coin" : "USDC",
+  usdcDomainVersion: "2",
 } as const;
 
 export const ROOTSTOCK_CONFIG = {

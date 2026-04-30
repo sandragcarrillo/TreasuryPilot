@@ -54,8 +54,9 @@ export async function buildBasePaymentHeader(args: {
   }
 
   const now = Math.floor(Date.now() / 1000);
+  // Generous window: 60s past (clock skew) → 5min future (signing UX + facilitator latency).
   const validAfter = (now - 60).toString();
-  const validBefore = (now + (args.accept.maxTimeoutSeconds || 60) + 60).toString();
+  const validBefore = (now + 300).toString();
   const nonce = randomNonceBytes32();
 
   const domain = {

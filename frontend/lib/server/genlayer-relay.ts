@@ -1,7 +1,6 @@
 import "server-only";
-import { createClient } from "genlayer-js";
+import { createClient, createAccount } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
-import { privateKeyToAccount } from "viem/accounts";
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
 const PRIVATE_KEY = process.env.PROJECT_GENLAYER_PRIVATE_KEY as string | undefined;
@@ -24,12 +23,15 @@ let cachedAddress: `0x${string}` | null = null;
 
 function getClient() {
   if (cachedClient) return { client: cachedClient, address: cachedAddress! };
-  const account = privateKeyToAccount(normalizeKey(PRIVATE_KEY));
-  cachedAddress = account.address;
+  // Use genlayer-js's createAccount so the SDK signs locally with the private key
+  // instead of delegating to the RPC via eth_sendTransaction (which Studio's RPC
+  // doesn't expose).
+  const account = createAccount(normalizeKey(PRIVATE_KEY));
+  cachedAddress = account.address as `0x${string}`;
   cachedClient = createClient({
     chain: studionet,
     endpoint: RPC_URL,
-    account: account.address,
+    account,
   } as any);
   return { client: cachedClient, address: cachedAddress };
 }

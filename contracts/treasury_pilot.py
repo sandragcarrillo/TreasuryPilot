@@ -95,7 +95,13 @@ class TreasuryPilot(gl.Contract):
           vouches for the user via off-chain signature verification).
         - If the caller IS the claimed actor, accept (direct GenLayer-wallet user).
         - Otherwise reject — no impersonation.
+
+        The claimed_actor parameter often arrives as a plain Python string from
+        the SDK; coerce it to an Address so it can be written into Address
+        storage fields.
         """
+        if isinstance(claimed_actor, str):
+            claimed_actor = Address(claimed_actor)
         sender = gl.message.sender_address
         if sender == self.relay_address:
             return claimed_actor
@@ -190,6 +196,8 @@ class TreasuryPilot(gl.Contract):
         """Transfer organization ownership to a new address. Current owner only."""
         actor = self._resolve_actor(actor_address)
         self._require_owner(org_id, actor)
+        if isinstance(new_owner, str):
+            new_owner = Address(new_owner)
         self.orgs[org_id].owner = new_owner
 
     # ─── Grant Proposals ──────────────────────────────────────────────────────

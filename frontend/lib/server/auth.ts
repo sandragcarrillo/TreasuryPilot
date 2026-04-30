@@ -79,6 +79,7 @@ export function buildAuthMessage(claim: AuthClaim): string {
 export interface VerifiedAuth {
   actorAddress: `0x${string}`;
   action: string;
+  nonce: string;
 }
 
 export async function verifyAuth(args: {
@@ -130,13 +131,20 @@ export async function verifyAuth(args: {
     return { ok: false, code: "signature_invalid", message: "Signature does not match claimed address" };
   }
 
-  await store.markUsed(claim.nonce, claim.address, claim.action);
-
   return {
     ok: true,
     data: {
       actorAddress: getAddress(claim.address),
       action: claim.action,
+      nonce: claim.nonce,
     },
   };
+}
+
+export async function markAuthConsumed(
+  nonce: string,
+  address: string,
+  action: string
+): Promise<void> {
+  await getNonceStore().markUsed(nonce, address, action);
 }

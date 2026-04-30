@@ -70,8 +70,8 @@ export async function buildChallenge(args: {
     mimeType: "application/json",
     maxTimeoutSeconds: 60,
     extra: {
-      name: "USD Coin",
-      version: "2",
+      name: BASE_CONFIG.usdcDomainName,
+      version: BASE_CONFIG.usdcDomainVersion,
     },
   };
 
