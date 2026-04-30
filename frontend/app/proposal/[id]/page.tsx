@@ -462,14 +462,15 @@ function ReportForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await mutateAsync({
+      const result = await mutateAsync({
         proposalId,
         milestonesCompleted: form.milestones,
         fundsSpentUsd: form.fundsSpent,
         deliverables: form.deliverables,
         evidenceUrls: form.evidenceUrls,
-        onSubmitted: (hash) => setTxHash(hash),
       });
+      const hash = result?.data?.genlayerTxHash;
+      if (typeof hash === "string") setTxHash(hash);
       onSuccess();
     } catch {}
   };

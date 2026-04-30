@@ -67,7 +67,9 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateOrgModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await mutateAsync({ name, constitution, onSubmitted: (hash) => setTxHash(hash) });
+      const result = await mutateAsync({ name, constitution });
+      const hash = result?.data?.genlayerTxHash;
+      if (typeof hash === "string") setTxHash(hash);
       onSuccess?.();
       onClose();
     } catch {}

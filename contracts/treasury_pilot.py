@@ -63,6 +63,12 @@ class Report:
 # ─── Contract ─────────────────────────────────────────────────────────────────
 
 class TreasuryPilot(gl.Contract):
+    # The trusted relay — typically a project-controlled wallet that calls write
+    # methods on behalf of users connected from non-GenLayer chains (Base, RSK, etc.).
+    # Direct callers can still write the contract; they just have to set actor_address
+    # equal to their own address.
+    relay_address: Address
+
     orgs: TreeMap[u32, Organization]
     org_count: u32
     proposals: TreeMap[u32, Proposal]
@@ -71,46 +77,61 @@ class TreasuryPilot(gl.Contract):
     report_counts: TreeMap[u32, u32]       # proposal_id → number of reports submitted
     program_spent: TreeMap[str, str]       # key: "{org_id}:{program_name}" → total USD approved
     program_names: TreeMap[u32, str]       # org_id → JSON list of known program names
-    # Multi-admin: org_id:address → 1 (admin) or absent
-    org_admins: TreeMap[str, u32]
-    # Track admin list for enumeration
+    org_admins: TreeMap[str, u32]          # "{org_id}:{address}" → 1 (admin) or absent
     admin_list: TreeMap[u32, str]          # org_id → JSON list of admin addresses
 
-    def __init__(self):
+    def __init__(self, relay_address: Address):
+        self.relay_address = relay_address
         self.org_count = u32(0)
         self.proposal_count = u32(0)
 
     # ─── Internal Helpers ─────────────────────────────────────────────────────
 
-    def _is_owner(self, org_id: u32) -> bool:
-        return gl.message.sender_address == self.orgs[org_id].owner
+    def _resolve_actor(self, claimed_actor: Address) -> Address:
+        """
+        Resolve the logical actor for a write call.
 
-    def _is_admin_or_owner(self, org_id: u32) -> bool:
+        - If the caller is the trusted relay, accept any claimed actor (relay
+          vouches for the user via off-chain signature verification).
+        - If the caller IS the claimed actor, accept (direct GenLayer-wallet user).
+        - Otherwise reject — no impersonation.
+        """
         sender = gl.message.sender_address
-        if sender == self.orgs[org_id].owner:
+        if sender == self.relay_address:
+            return claimed_actor
+        if sender == claimed_actor:
+            return claimed_actor
+        raise gl.vm.UserError("Cannot act on behalf of another address")
+
+    def _is_owner(self, org_id: u32, actor: Address) -> bool:
+        return actor == self.orgs[org_id].owner
+
+    def _is_admin_or_owner(self, org_id: u32, actor: Address) -> bool:
+        if actor == self.orgs[org_id].owner:
             return True
-        admin_key = f"{int(org_id)}:{str(sender)}"
+        admin_key = f"{int(org_id)}:{str(actor)}"
         return self.org_admins.get(admin_key, u32(0)) == u32(1)
 
-    def _require_owner(self, org_id: u32):
-        if not self._is_owner(org_id):
+    def _require_owner(self, org_id: u32, actor: Address):
+        if not self._is_owner(org_id, actor):
             raise gl.vm.UserError("Only the organization owner can do this")
 
-    def _require_admin_or_owner(self, org_id: u32):
-        if not self._is_admin_or_owner(org_id):
+    def _require_admin_or_owner(self, org_id: u32, actor: Address):
+        if not self._is_admin_or_owner(org_id, actor):
             raise gl.vm.UserError("Only an admin or the organization owner can do this")
 
     # ─── Organization Management ──────────────────────────────────────────────
 
     @gl.public.write
-    def create_org(self, name: str, constitution: str):
-        """Register a new grants organization. Caller becomes owner."""
+    def create_org(self, actor_address: Address, name: str, constitution: str):
+        """Register a new grants organization. actor_address becomes owner."""
+        actor = self._resolve_actor(actor_address)
         oid = self.org_count
         self.orgs[oid] = Organization(
             id=oid,
             name=name,
             constitution=constitution,
-            owner=gl.message.sender_address,
+            owner=actor,
             proposal_count=u32(0),
             auto_approve_enabled=False,
             auto_approve_threshold_usd="0",
@@ -119,24 +140,17 @@ class TreasuryPilot(gl.Contract):
         self.org_count = u32(oid + 1)
 
     @gl.public.write
-    def update_constitution(self, org_id: u32, new_constitution: str):
+    def update_constitution(self, actor_address: Address, org_id: u32, new_constitution: str):
         """Update the organization's constitution. Admin or owner."""
-        self._require_admin_or_owner(org_id)
+        actor = self._resolve_actor(actor_address)
+        self._require_admin_or_owner(org_id, actor)
         self.orgs[org_id].constitution = new_constitution
 
     @gl.public.write
-    def set_auto_approve(self, org_id: u32, enabled: bool, threshold_usd: str, veto_window_hours: u32):
-        """
-        Configure auto-approval for small grants. Owner only.
-
-        When enabled, proposals scoring alignment >= 8, risk = low,
-        recommendation = approve, AND amount <= threshold_usd are
-        automatically marked as approved. Owner/admins can veto within
-        the veto_window_hours after auto-approval.
-
-        Pass enabled=False to turn off auto-approval entirely.
-        """
-        self._require_owner(org_id)
+    def set_auto_approve(self, actor_address: Address, org_id: u32, enabled: bool, threshold_usd: str, veto_window_hours: u32):
+        """Configure auto-approval for small grants. Owner only."""
+        actor = self._resolve_actor(actor_address)
+        self._require_owner(org_id, actor)
         self.orgs[org_id].auto_approve_enabled = enabled
         self.orgs[org_id].auto_approve_threshold_usd = threshold_usd
         self.orgs[org_id].veto_window_hours = veto_window_hours
@@ -144,12 +158,12 @@ class TreasuryPilot(gl.Contract):
     # ─── Admin Management ─────────────────────────────────────────────────────
 
     @gl.public.write
-    def add_admin(self, org_id: u32, admin_address: Address):
+    def add_admin(self, actor_address: Address, org_id: u32, admin_address: Address):
         """Add an admin to the organization. Owner only."""
-        self._require_owner(org_id)
+        actor = self._resolve_actor(actor_address)
+        self._require_owner(org_id, actor)
         admin_key = f"{int(org_id)}:{str(admin_address)}"
         self.org_admins[admin_key] = u32(1)
-        # Update admin list for enumeration
         list_json = self.admin_list.get(org_id, "[]")
         admins = json.loads(list_json)
         addr_str = str(admin_address)
@@ -158,12 +172,12 @@ class TreasuryPilot(gl.Contract):
             self.admin_list[org_id] = json.dumps(admins)
 
     @gl.public.write
-    def remove_admin(self, org_id: u32, admin_address: Address):
+    def remove_admin(self, actor_address: Address, org_id: u32, admin_address: Address):
         """Remove an admin from the organization. Owner only."""
-        self._require_owner(org_id)
+        actor = self._resolve_actor(actor_address)
+        self._require_owner(org_id, actor)
         admin_key = f"{int(org_id)}:{str(admin_address)}"
         self.org_admins[admin_key] = u32(0)
-        # Update admin list
         list_json = self.admin_list.get(org_id, "[]")
         admins = json.loads(list_json)
         addr_str = str(admin_address)
@@ -172,9 +186,10 @@ class TreasuryPilot(gl.Contract):
             self.admin_list[org_id] = json.dumps(admins)
 
     @gl.public.write
-    def transfer_ownership(self, org_id: u32, new_owner: Address):
+    def transfer_ownership(self, actor_address: Address, org_id: u32, new_owner: Address):
         """Transfer organization ownership to a new address. Current owner only."""
-        self._require_owner(org_id)
+        actor = self._resolve_actor(actor_address)
+        self._require_owner(org_id, actor)
         self.orgs[org_id].owner = new_owner
 
     # ─── Grant Proposals ──────────────────────────────────────────────────────
@@ -182,6 +197,7 @@ class TreasuryPilot(gl.Contract):
     @gl.public.write
     def submit_proposal(
         self,
+        actor_address: Address,
         org_id: u32,
         title: str,
         description: str,
@@ -190,7 +206,8 @@ class TreasuryPilot(gl.Contract):
         target_program: str,
         rationale: str,
     ):
-        """Submit a grant proposal to an organization."""
+        """Submit a grant proposal to an organization. actor_address becomes submitter."""
+        actor = self._resolve_actor(actor_address)
         org = self.orgs[org_id]
         pid = self.proposal_count
 
@@ -203,7 +220,7 @@ class TreasuryPilot(gl.Contract):
             recipient=recipient,
             target_program=target_program,
             rationale=rationale,
-            submitter=gl.message.sender_address,
+            submitter=actor,
             alignment_score=i32(0),
             risk_level="",
             roi_assessment="",
@@ -215,7 +232,6 @@ class TreasuryPilot(gl.Contract):
         self.proposal_count = u32(pid + 1)
         self.orgs[org_id].proposal_count = u32(org.proposal_count + 1)
 
-        # Register program name for budget tracking
         known_json = self.program_names.get(org_id, "[]")
         known = json.loads(known_json)
         if target_program not in known:
@@ -226,8 +242,9 @@ class TreasuryPilot(gl.Contract):
     def evaluate_proposal(self, proposal_id: u32):
         """
         Trigger AI validator consensus to evaluate a grant proposal.
-        Sets status based on recommendation and auto-approve rules.
-        Approved proposals update the program's cumulative spend.
+        Permissionless — anyone can pay/trigger the evaluation. The result is
+        deterministic (in expectation) given the proposal + constitution, so
+        there's no notion of an "evaluator identity".
         """
         proposal = self.proposals[proposal_id]
         if proposal.evaluated:
@@ -321,7 +338,6 @@ Return ONLY valid JSON, no markdown fences:
         rec = result["recommendation"]
         score = result["alignment_score"]
 
-        # Determine final status — check auto-approve first
         auto_approved = False
         if org.auto_approve_enabled:
             try:
@@ -346,7 +362,6 @@ Return ONLY valid JSON, no markdown fences:
         else:
             status = "approved" if rec == "approve" else "rejected"
 
-        # Track program spending for approved/auto-approved proposals
         if status in ("approved", "auto_approved"):
             try:
                 current = float(self.program_spent.get(program_key, "0"))
@@ -364,21 +379,16 @@ Return ONLY valid JSON, no markdown fences:
         self.proposals[proposal_id].status = status
 
     @gl.public.write
-    def veto_proposal(self, proposal_id: u32):
-        """
-        Veto an auto-approved proposal. Admin or owner only.
-        The veto window (in hours) is defined per-org by the owner.
-        On-chain: always allows veto on auto_approved proposals.
-        Off-chain (frontend/bot): enforces the time window display.
-        """
+    def veto_proposal(self, actor_address: Address, proposal_id: u32):
+        """Veto an auto-approved proposal. Admin or owner only."""
+        actor = self._resolve_actor(actor_address)
         proposal = self.proposals[proposal_id]
-        self._require_admin_or_owner(proposal.org_id)
+        self._require_admin_or_owner(proposal.org_id, actor)
         if proposal.status != "auto_approved":
             raise gl.vm.UserError("Can only veto auto-approved proposals")
 
         self.proposals[proposal_id].status = "vetoed"
 
-        # Reverse program spend
         program_key = f"{int(proposal.org_id)}:{str(proposal.target_program)}"
         try:
             current = float(self.program_spent.get(program_key, "0"))
@@ -392,16 +402,20 @@ Return ONLY valid JSON, no markdown fences:
     @gl.public.write
     def submit_report(
         self,
+        actor_address: Address,
         proposal_id: u32,
         milestones_completed: str,
         funds_spent_usd: str,
         deliverables: str,
         evidence_urls: str,
     ):
-        """Submit a progress report for an approved grant."""
+        """Submit a progress report for an approved grant. actor_address must be the proposal's submitter."""
+        actor = self._resolve_actor(actor_address)
         proposal = self.proposals[proposal_id]
         if proposal.status not in ("approved", "auto_approved"):
             raise gl.vm.UserError("Can only submit reports for approved proposals")
+        if actor != proposal.submitter:
+            raise gl.vm.UserError("Only the proposal submitter can submit reports")
 
         report_num = self.report_counts.get(proposal_id, u32(0))
         report_key = f"{int(proposal_id)}:{int(report_num)}"
@@ -422,10 +436,7 @@ Return ONLY valid JSON, no markdown fences:
 
     @gl.public.write
     def evaluate_report(self, proposal_id: u32, report_number: u32):
-        """
-        AI validators evaluate a progress report against the original proposal KPIs.
-        Sets progress_score, roi_status, and ai_summary.
-        """
+        """AI validators evaluate a progress report against the original proposal KPIs. Permissionless."""
         report_key = f"{int(proposal_id)}:{int(report_number)}"
         report = self.reports[report_key]
         if report.evaluated:
@@ -510,6 +521,10 @@ Return ONLY valid JSON, no markdown fences:
     # ─── View Methods ─────────────────────────────────────────────────────────
 
     @gl.public.view
+    def get_relay_address(self) -> str:
+        return str(self.relay_address)
+
+    @gl.public.view
     def get_org(self, org_id: u32) -> str:
         o = self.orgs[org_id]
         return json.dumps({
@@ -529,7 +544,6 @@ Return ONLY valid JSON, no markdown fences:
 
     @gl.public.view
     def get_org_admins(self, org_id: u32) -> str:
-        """Returns JSON list of admin addresses for this org (excludes owner)."""
         return self.admin_list.get(org_id, "[]")
 
     @gl.public.view
@@ -581,7 +595,6 @@ Return ONLY valid JSON, no markdown fences:
 
     @gl.public.view
     def get_program_budget_status(self, org_id: u32) -> str:
-        """Returns total USD approved per grant program for this org."""
         known_json = self.program_names.get(org_id, "[]")
         known = json.loads(known_json)
         status = {}

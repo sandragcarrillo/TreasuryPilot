@@ -27,7 +27,7 @@ export function SubmitProposalModal({ orgId, programs, onClose, onSuccess }: Sub
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await mutateAsync({
+      const result = await mutateAsync({
         orgId,
         title: form.title,
         description: form.description,
@@ -35,8 +35,9 @@ export function SubmitProposalModal({ orgId, programs, onClose, onSuccess }: Sub
         recipient: form.recipient || address || "",
         targetProgram: form.targetProgram,
         rationale: form.rationale,
-        onSubmitted: (hash) => setTxHash(hash),
       });
+      const hash = result?.data?.genlayerTxHash;
+      if (typeof hash === "string") setTxHash(hash);
       onSuccess?.();
       onClose();
     } catch {}

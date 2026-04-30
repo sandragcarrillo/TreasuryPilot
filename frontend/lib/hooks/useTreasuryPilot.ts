@@ -6,6 +6,7 @@ import TreasuryPilot from "../contracts/TreasuryPilot";
 import { getContractAddress } from "../genlayer/client";
 import { useWallet } from "../genlayer/wallet";
 import { success, error } from "../utils/toast";
+import { relayCall } from "../payment/relay-call";
 import type {
   Organization,
   Proposal,
@@ -13,14 +14,21 @@ import type {
   ProgramBudgetStatus,
 } from "../contracts/types";
 
-export function useTreasuryContract(): TreasuryPilot | null {
-  const { address } = useWallet();
-  const contractAddress = getContractAddress();
+// ─── Read client ───────────────────────────────────────────────────────────
 
+export function useTreasuryContract(): TreasuryPilot | null {
+  const contractAddress = getContractAddress();
   return useMemo(() => {
     if (!contractAddress) return null;
-    return new TreasuryPilot(contractAddress, address);
-  }, [contractAddress, address]);
+    return new TreasuryPilot(contractAddress);
+  }, [contractAddress]);
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+function requireAddress(addr: string | null): `0x${string}` {
+  if (!addr) throw new Error("Wallet not connected");
+  return addr as `0x${string}`;
 }
 
 // ─── Organization Queries ──────────────────────────────────────────────────
@@ -103,9 +111,7 @@ export function useProposalReports(proposalId: number | null) {
   return useQuery<Report[], Error>({
     queryKey: ["reports", proposalId],
     queryFn: () =>
-      contract
-        ? contract.getProposalReports(proposalId!)
-        : Promise.resolve([]),
+      contract ? contract.getProposalReports(proposalId!) : Promise.resolve([]),
     enabled: !!contract && proposalId !== null,
     staleTime: 5000,
     refetchInterval: 8000,
@@ -127,7 +133,6 @@ export function useProgramBudgetStatus(orgId: number | null) {
 // ─── Organization Mutations ────────────────────────────────────────────────
 
 export function useCreateOrg() {
-  const contract = useTreasuryContract();
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
@@ -135,15 +140,17 @@ export function useCreateOrg() {
     mutationFn: async ({
       name,
       constitution,
-      onSubmitted,
     }: {
       name: string;
       constitution: string;
-      onSubmitted?: (txHash: string) => void;
     }) => {
-      if (!contract) throw new Error("Contract not configured");
-      if (!address) throw new Error("Wallet not connected");
-      return contract.createOrg(name, constitution, onSubmitted);
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "create-org",
+        address: actor,
+        data: { name, constitution },
+        paid: true,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orgs"] });
@@ -159,8 +166,38 @@ export function useCreateOrg() {
   });
 }
 
+export function useUpdateConstitution() {
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      orgId,
+      newConstitution,
+    }: {
+      orgId: number;
+      newConstitution: string;
+    }) => {
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "update-constitution",
+        address: actor,
+        data: { orgId, newConstitution },
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["org", variables.orgId] });
+      success("Constitution updated");
+    },
+    onError: (err: any) => {
+      error("Failed to update constitution", {
+        description: err?.message || "Please try again.",
+      });
+    },
+  });
+}
+
 export function useSetAutoApprove() {
-  const contract = useTreasuryContract();
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
@@ -176,14 +213,12 @@ export function useSetAutoApprove() {
       thresholdUsd: string;
       vetoWindowHours: number;
     }) => {
-      if (!contract) throw new Error("Contract not configured");
-      if (!address) throw new Error("Wallet not connected");
-      return contract.setAutoApprove(
-        orgId,
-        enabled,
-        thresholdUsd,
-        vetoWindowHours
-      );
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "set-auto-approve",
+        address: actor,
+        data: { orgId, enabled, thresholdUsd, vetoWindowHours },
+      });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["org", variables.orgId] });
@@ -198,7 +233,6 @@ export function useSetAutoApprove() {
 }
 
 export function useAddAdmin() {
-  const contract = useTreasuryContract();
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
@@ -210,14 +244,15 @@ export function useAddAdmin() {
       orgId: number;
       adminAddress: string;
     }) => {
-      if (!contract) throw new Error("Contract not configured");
-      if (!address) throw new Error("Wallet not connected");
-      return contract.addAdmin(orgId, adminAddress);
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "add-admin",
+        address: actor,
+        data: { orgId, adminAddress: adminAddress as `0x${string}` },
+      });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["orgAdmins", variables.orgId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["orgAdmins", variables.orgId] });
       success("Admin added");
     },
     onError: (err: any) => {
@@ -229,7 +264,6 @@ export function useAddAdmin() {
 }
 
 export function useRemoveAdmin() {
-  const contract = useTreasuryContract();
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
@@ -241,14 +275,15 @@ export function useRemoveAdmin() {
       orgId: number;
       adminAddress: string;
     }) => {
-      if (!contract) throw new Error("Contract not configured");
-      if (!address) throw new Error("Wallet not connected");
-      return contract.removeAdmin(orgId, adminAddress);
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "remove-admin",
+        address: actor,
+        data: { orgId, adminAddress: adminAddress as `0x${string}` },
+      });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["orgAdmins", variables.orgId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["orgAdmins", variables.orgId] });
       success("Admin removed");
     },
     onError: (err: any) => {
@@ -260,7 +295,6 @@ export function useRemoveAdmin() {
 }
 
 export function useTransferOwnership() {
-  const contract = useTreasuryContract();
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
@@ -272,9 +306,12 @@ export function useTransferOwnership() {
       orgId: number;
       newOwner: string;
     }) => {
-      if (!contract) throw new Error("Contract not configured");
-      if (!address) throw new Error("Wallet not connected");
-      return contract.transferOwnership(orgId, newOwner);
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "transfer-ownership",
+        address: actor,
+        data: { orgId, newOwner: newOwner as `0x${string}` },
+      });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["org", variables.orgId] });
@@ -291,7 +328,6 @@ export function useTransferOwnership() {
 // ─── Proposal Mutations ────────────────────────────────────────────────────
 
 export function useSubmitProposal() {
-  const contract = useTreasuryContract();
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
@@ -304,7 +340,6 @@ export function useSubmitProposal() {
       recipient,
       targetProgram,
       rationale,
-      onSubmitted,
     }: {
       orgId: number;
       title: string;
@@ -313,25 +348,25 @@ export function useSubmitProposal() {
       recipient: string;
       targetProgram: string;
       rationale: string;
-      onSubmitted?: (txHash: string) => void;
     }) => {
-      if (!contract) throw new Error("Contract not configured");
-      if (!address) throw new Error("Wallet not connected");
-      return contract.submitProposal(
-        orgId,
-        title,
-        description,
-        requestedAmountUsd,
-        recipient,
-        targetProgram,
-        rationale,
-        onSubmitted
-      );
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "submit-proposal",
+        address: actor,
+        data: {
+          orgId,
+          title,
+          description,
+          requestedAmountUsd,
+          recipient,
+          targetProgram,
+          rationale,
+        },
+        paid: true,
+      });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["proposals", variables.orgId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["proposals", variables.orgId] });
       queryClient.invalidateQueries({ queryKey: ["orgs"] });
       queryClient.invalidateQueries({ queryKey: ["allProposals"] });
       success("Proposal submitted", {
@@ -347,15 +382,18 @@ export function useSubmitProposal() {
 }
 
 export function useEvaluateProposal() {
-  const contract = useTreasuryContract();
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (proposalId: number) => {
-      if (!contract) throw new Error("Contract not configured");
-      if (!address) throw new Error("Wallet not connected");
-      return contract.evaluateProposal(proposalId);
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "evaluate-proposal",
+        address: actor,
+        data: { proposalId },
+        paid: true,
+      });
     },
     onSuccess: (_, proposalId) => {
       queryClient.invalidateQueries({ queryKey: ["proposal", proposalId] });
@@ -375,15 +413,17 @@ export function useEvaluateProposal() {
 }
 
 export function useVetoProposal() {
-  const contract = useTreasuryContract();
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (proposalId: number) => {
-      if (!contract) throw new Error("Contract not configured");
-      if (!address) throw new Error("Wallet not connected");
-      return contract.vetoProposal(proposalId);
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "veto-proposal",
+        address: actor,
+        data: { proposalId },
+      });
     },
     onSuccess: (_, proposalId) => {
       queryClient.invalidateQueries({ queryKey: ["proposal", proposalId] });
@@ -403,7 +443,6 @@ export function useVetoProposal() {
 // ─── Report Mutations ──────────────────────────────────────────────────────
 
 export function useSubmitReport() {
-  const contract = useTreasuryContract();
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
@@ -414,30 +453,29 @@ export function useSubmitReport() {
       fundsSpentUsd,
       deliverables,
       evidenceUrls,
-      onSubmitted,
     }: {
       proposalId: number;
       milestonesCompleted: string;
       fundsSpentUsd: string;
       deliverables: string;
       evidenceUrls: string;
-      onSubmitted?: (txHash: string) => void;
     }) => {
-      if (!contract) throw new Error("Contract not configured");
-      if (!address) throw new Error("Wallet not connected");
-      return contract.submitReport(
-        proposalId,
-        milestonesCompleted,
-        fundsSpentUsd,
-        deliverables,
-        evidenceUrls,
-        onSubmitted
-      );
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "submit-report",
+        address: actor,
+        data: {
+          proposalId,
+          milestonesCompleted,
+          fundsSpentUsd,
+          deliverables,
+          evidenceUrls,
+        },
+        paid: true,
+      });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["reports", variables.proposalId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["reports", variables.proposalId] });
       success("Report submitted", {
         description: "Your progress report has been recorded.",
       });
@@ -451,7 +489,6 @@ export function useSubmitReport() {
 }
 
 export function useEvaluateReport() {
-  const contract = useTreasuryContract();
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
@@ -463,14 +500,16 @@ export function useEvaluateReport() {
       proposalId: number;
       reportNumber: number;
     }) => {
-      if (!contract) throw new Error("Contract not configured");
-      if (!address) throw new Error("Wallet not connected");
-      return contract.evaluateReport(proposalId, reportNumber);
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "evaluate-report",
+        address: actor,
+        data: { proposalId, reportNumber },
+        paid: true,
+      });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["reports", variables.proposalId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["reports", variables.proposalId] });
       success("Report evaluation complete", {
         description: "AI validators have assessed the progress report.",
       });
