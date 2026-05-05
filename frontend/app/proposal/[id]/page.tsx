@@ -826,6 +826,7 @@ function ReportCard({
 }) {
   const { mutateAsync: evalReport, isPending } = useEvaluateReport();
   const { isConnected } = useWallet();
+  const [expanded, setExpanded] = useState(false);
 
   const {
     isPending: evalPending,
@@ -904,53 +905,71 @@ function ReportCard({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-xs border-y border-border-soft py-4">
-        <div className="space-y-1.5">
-          <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
-            Milestones
-          </span>
-          <p className="text-text-dim">{report.milestones_completed}</p>
-        </div>
-        <div className="space-y-1.5">
-          <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
-            Funds spent
-          </span>
-          <p className="text-text-dim font-mono">${report.funds_spent_usd}</p>
-        </div>
-      </div>
+      {expanded && (
+        <>
+          <div className="grid grid-cols-2 gap-4 text-xs border-y border-border-soft py-4">
+            <div className="space-y-1.5">
+              <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
+                Milestones
+              </span>
+              <p className="text-text-dim">{report.milestones_completed}</p>
+            </div>
+            <div className="space-y-1.5">
+              <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
+                Funds spent
+              </span>
+              <p className="text-text-dim font-mono">${report.funds_spent_usd}</p>
+            </div>
+          </div>
 
-      <div className="text-xs space-y-1.5">
-        <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
-          Deliverables
-        </span>
-        <p className="text-text-dim leading-relaxed text-sm">{report.deliverables}</p>
-      </div>
+          <div className="text-xs space-y-2">
+            <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
+              Deliverables
+            </span>
+            <RichText
+              text={normalizeReasoning(report.deliverables ?? "")}
+              compact
+            />
+          </div>
 
-      {report.evidence_urls && (
-        <div className="text-xs space-y-1.5">
-          <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
-            Evidence
-          </span>
-          <p className="text-accent/80 font-mono break-all">{report.evidence_urls}</p>
-        </div>
+          {report.evidence_urls && (
+            <div className="text-xs space-y-2">
+              <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
+                Evidence
+              </span>
+              <RichText
+                text={normalizeReasoning(report.evidence_urls ?? "")}
+                compact
+              />
+            </div>
+          )}
+
+          {report.evaluated && report.ai_summary && (
+            <div className="border-t border-border-soft pt-4 space-y-3">
+              <span className="font-mono text-accent tracking-[0.25em] text-[10px] uppercase">
+                AI Assessment
+              </span>
+              {(() => {
+                const { body, confidence } = splitConfidence(report.ai_summary);
+                return (
+                  <>
+                    <RichText text={normalizeReasoning(body)} compact />
+                    {confidence && <ConfidencePill value={confidence} />}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </>
       )}
 
-      {report.evaluated && report.ai_summary && (
-        <div className="border-t border-border-soft pt-4 space-y-3">
-          <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
-            AI assessment
-          </span>
-          {(() => {
-            const { body, confidence } = splitConfidence(report.ai_summary);
-            return (
-              <>
-                <RichText text={normalizeReasoning(body)} compact />
-                {confidence && <ConfidencePill value={confidence} />}
-              </>
-            );
-          })()}
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="text-[10px] font-mono tracking-[0.2em] text-text-faint hover:text-accent transition-colors"
+      >
+        {expanded ? "Collapse ↑" : "Read more ↓"}
+      </button>
 
       {!report.evaluated && showPreliminaryReport && undeterminedReport && reportEvalTxHash && (
         <div className="border-t border-border-soft pt-4">

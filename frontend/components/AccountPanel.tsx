@@ -107,7 +107,7 @@ export function AccountPanel() {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Connect Wallet</DialogTitle>
             <DialogDescription>
-              Axiom accepts payments on multiple chains. Connect your wallet on
+              Axiom Pilot accepts payments on multiple chains. Connect your wallet on
               any of them.
             </DialogDescription>
           </DialogHeader>

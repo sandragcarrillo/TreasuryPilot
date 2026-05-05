@@ -68,7 +68,7 @@ function getNonceStore(): NonceStore {
 
 export function buildAuthMessage(claim: AuthClaim): string {
   return [
-    "Axiom Authorization",
+    "Axiom Pilot Authorization",
     `Action: ${claim.action}`,
     `Address: ${claim.address}`,
     `Nonce: ${claim.nonce}`,

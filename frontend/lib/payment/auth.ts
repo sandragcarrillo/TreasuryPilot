@@ -23,7 +23,7 @@ export interface AuthEnvelope {
 
 function buildMessage(claim: AuthClaim): string {
   return [
-    "Axiom Authorization",
+    "Axiom Pilot Authorization",
     `Action: ${claim.action}`,
     `Address: ${claim.address}`,
     `Nonce: ${claim.nonce}`,

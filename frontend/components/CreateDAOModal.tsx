@@ -100,7 +100,7 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateOrgModalProps) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-border-soft">
           <div>
             <h2 className="font-display text-lg text-text">Register Organization</h2>
-            <p className="text-xs text-text-faint font-mono mt-0.5">Add your organization to the Axiom registry</p>
+            <p className="text-xs text-text-faint font-mono mt-0.5">Add your organization to the Axiom Pilot registry</p>
           </div>
           <button onClick={onClose} className="text-text-faint hover:text-text-dim transition-colors">
             <X className="w-5 h-5" />

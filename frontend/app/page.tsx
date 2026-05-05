@@ -28,16 +28,8 @@ export default function HomePage() {
       </main>
 
       <footer className="border-t border-border-soft py-6 px-6 mt-20">
-        <div className="max-w-6xl mx-auto flex items-center justify-between text-[11px] font-mono text-text-faint tracking-wider">
-          <span>Axiom</span>
-          <a
-            href="https://github.com/sandragcarrillo/TreasuryPilot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-text-dim transition-colors"
-          >
-            GitHub ↗
-          </a>
+        <div className="max-w-6xl mx-auto text-center text-[11px] font-mono text-text-faint tracking-wider">
+          © 2026 Axiom Pilot <span className="text-text-faint/40 mx-1">·</span> All rights reserved
         </div>
       </footer>
     </div>
@@ -57,7 +49,7 @@ function Hero() {
           AI evaluation for grants programs.
         </h1>
         <p className="text-base md:text-lg text-text-dim leading-relaxed max-w-2xl mb-10">
-          Axiom evaluates every grant proposal against your
+          Axiom Pilot evaluates every grant proposal against your
           organization&apos;s constitution using consensus from multiple AI
           validators. Every decision comes with public reasoning your
           community can audit.
@@ -130,7 +122,7 @@ function Problem() {
         </div>
 
         <p className="mt-12 text-2xl md:text-3xl text-accent font-semibold tracking-tight">
-          Axiom fixes all four.
+          Axiom Pilot fixes all four.
         </p>
       </div>
     </section>
@@ -169,7 +161,7 @@ function HowItWorks() {
           <HowStep
             n="03"
             title="Your delegates/team members decide. Always."
-            body="Axiom is advisory infrastructure, never the decision-maker. Your delegates/team members see the AI's recommendation with full reasoning, similar past proposals, and risk assessment, then they vote. Auto-approval is opt-in, with veto windows for safety."
+            body="Axiom Pilot is advisory infrastructure, never the decision-maker. Your delegates/team members see the AI's recommendation with full reasoning, similar past proposals, and risk assessment, then they vote. Auto-approval is opt-in, with veto windows for safety."
             visual={<DelegateVisual />}
           />
         </div>
@@ -316,7 +308,7 @@ function HowItWorksForUsers() {
           Built for both sides
         </h3>
         <p className="text-text-dim text-base md:text-lg leading-relaxed mb-12 max-w-2xl">
-          Axiom works the same way whether you&apos;re running a grants
+          Axiom Pilot works the same way whether you&apos;re running a grants
           program or applying for one.
         </p>
 
@@ -472,23 +464,23 @@ function FAQ() {
   const items = [
     {
       q: "What if the AI is wrong?",
-      a: "That's why Axiom is advisory, not binding. Your team members or delegates always make the final call. The AI's job is to surface analysis and flag issues. The decision and the responsibility stay human. We also publish every evaluation's reasoning publicly so disagreements can be debated with the actual logic on the table.",
+      a: "That's why Axiom Pilot is advisory, not binding. Your team members or delegates always make the final call. The AI's job is to surface analysis and flag issues. The decision and the responsibility stay human. We also publish every evaluation's reasoning publicly so disagreements can be debated with the actual logic on the table.",
     },
     {
       q: "Which AI model do you use?",
-      a: "Axiom runs on GenLayer, which uses multiple LLM validators that must reach consensus on each evaluation. Rather than one model deciding alone, several models evaluate independently and either agree or surface disagreement. Currently this is powered by frontier models (Claude, GPT-4 class). The specific models can be audited per evaluation.",
+      a: "Axiom Pilot runs on GenLayer, which uses multiple LLM validators that must reach consensus on each evaluation. Rather than one model deciding alone, several models evaluate independently and either agree or surface disagreement. Currently this is powered by frontier models (Claude, GPT-4 class). The specific models can be audited per evaluation.",
     },
     {
       q: "Is the AI evaluation binding on the organization?",
-      a: "No. By default, AI evaluations are recommendations. Organizations can opt into auto-approval for small grants under a threshold (with a veto window for team members or delegates to override), but this is a deliberate choice each organization makes in their settings. You can run Axiom in shadow mode for as long as you want.",
+      a: "No. By default, AI evaluations are recommendations. Organizations can opt into auto-approval for small grants under a threshold (with a veto window for team members or delegates to override), but this is a deliberate choice each organization makes in their settings. You can run Axiom Pilot in shadow mode for as long as you want.",
     },
     {
       q: "What happens to data my organization submits?",
-      a: "Your constitution and evaluation results live on-chain and are public. Your organization controls who has admin access. Axiom doesn't sell, share, or use your data for anything beyond running your evaluations.",
+      a: "Your constitution and evaluation results live on-chain and are public. Your organization controls who has admin access. Axiom Pilot doesn't sell, share, or use your data for anything beyond running your evaluations.",
     },
     {
-      q: "Can I use Axiom without my organization being on-chain?",
-      a: "Yes. The constitution and evaluations can live on GenLayer regardless of where your governance happens today. You can run Axiom as an evaluation layer that posts results back to your forum (Discourse, Commonwealth, etc.) without changing your existing voting setup.",
+      q: "Can I use Axiom Pilot without my organization being on-chain?",
+      a: "Yes. The constitution and evaluations can live on GenLayer regardless of where your governance happens today. You can run Axiom Pilot as an evaluation layer that posts results back to your forum (Discourse, Commonwealth, etc.) without changing your existing voting setup.",
     },
     {
       q: "What's GenLayer?",

@@ -1,5 +1,5 @@
 /**
- * Chain registry — chains Axiom accepts payments on.
+ * Chain registry — chains Axiom Pilot accepts payments on.
  * Single source of truth for client + server.
  */
 
