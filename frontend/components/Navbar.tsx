@@ -59,6 +59,11 @@ export function Navbar() {
             label="Organizations"
             isActive={isActive("/organizations")}
           />
+          <NavLink
+            href="/pricing"
+            label="Pricing"
+            isActive={isActive("/pricing")}
+          />
           {isConnected && (
             <NavLink
               href="/dashboard"
