@@ -5,11 +5,16 @@ export type NetworkMode = "testnet" | "mainnet";
 export const NETWORK_MODE: NetworkMode =
   (process.env.NEXT_PUBLIC_X402_NETWORK as NetworkMode) || "testnet";
 
-export const PROJECT_PAYMENT_ADDRESS = process.env
-  .PROJECT_PAYMENT_ADDRESS as `0x${string}`;
-
-if (!PROJECT_PAYMENT_ADDRESS) {
-  throw new Error("PROJECT_PAYMENT_ADDRESS env var is required");
+// Defer the missing-env error to first use rather than module import time.
+// Next.js evaluates route modules during the build's "Collecting page data"
+// phase; throwing at the top level would crash the build when env vars
+// aren't yet set (e.g. fresh Vercel deploy before vars are configured).
+export function getProjectPaymentAddress(): `0x${string}` {
+  const v = process.env.PROJECT_PAYMENT_ADDRESS;
+  if (!v) {
+    throw new Error("PROJECT_PAYMENT_ADDRESS env var is required");
+  }
+  return v as `0x${string}`;
 }
 
 export type RouteId =

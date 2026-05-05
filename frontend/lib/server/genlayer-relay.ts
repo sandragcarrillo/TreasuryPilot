@@ -2,13 +2,18 @@ import "server-only";
 import { createClient, createAccount } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
-const PRIVATE_KEY = process.env.PROJECT_GENLAYER_PRIVATE_KEY as string | undefined;
 const RPC_URL =
   process.env.NEXT_PUBLIC_GENLAYER_RPC_URL || "https://studio.genlayer.com/api";
 
-if (!CONTRACT_ADDRESS) {
-  throw new Error("NEXT_PUBLIC_CONTRACT_ADDRESS env var is required");
+// Resolve required env vars at first use (request time) rather than module
+// import time, so a missing var doesn't crash Next.js's "Collecting page
+// data" build phase on a fresh deploy.
+function getContractAddress(): `0x${string}` {
+  const v = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+  if (!v) {
+    throw new Error("NEXT_PUBLIC_CONTRACT_ADDRESS env var is required");
+  }
+  return v as `0x${string}`;
 }
 
 function normalizeKey(key: string | undefined): `0x${string}` {
@@ -26,7 +31,7 @@ function getClient() {
   // Use genlayer-js's createAccount so the SDK signs locally with the private key
   // instead of delegating to the RPC via eth_sendTransaction (which Studio's RPC
   // doesn't expose).
-  const account = createAccount(normalizeKey(PRIVATE_KEY));
+  const account = createAccount(normalizeKey(process.env.PROJECT_GENLAYER_PRIVATE_KEY));
   cachedAddress = account.address as `0x${string}`;
   cachedClient = createClient({
     chain: studionet,
@@ -39,7 +44,7 @@ function getClient() {
 async function write(functionName: string, args: unknown[]): Promise<string> {
   const { client } = getClient();
   const txHash = await client.writeContract({
-    address: CONTRACT_ADDRESS,
+    address: getContractAddress(),
     functionName,
     args,
     value: BigInt(0),

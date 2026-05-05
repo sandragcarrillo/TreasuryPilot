@@ -1,7 +1,7 @@
 import "server-only";
 import {
   BASE_CONFIG,
-  PROJECT_PAYMENT_ADDRESS,
+  getProjectPaymentAddress,
   ROOTSTOCK_CONFIG,
   ROUTE_PRICE_USD,
   type RouteId,
@@ -58,13 +58,14 @@ export async function buildChallenge(args: {
 }): Promise<PaymentChallenge> {
   const priceUsd = ROUTE_PRICE_USD[args.routeId];
   const description = `Axiom Pilot ${args.routeId}`;
+  const payTo = getProjectPaymentAddress();
 
   const baseReq: BasePaymentRequirement = {
     scheme: "exact",
     network: BASE_CONFIG.network,
     asset: BASE_CONFIG.usdcAddress,
     maxAmountRequired: usdToUsdcAtomic(priceUsd).toString(),
-    payTo: PROJECT_PAYMENT_ADDRESS,
+    payTo,
     resource: args.resource,
     description,
     mimeType: "application/json",
@@ -84,7 +85,7 @@ export async function buildChallenge(args: {
     network: ROOTSTOCK_CONFIG.network,
     asset: "rBTC",
     maxAmountRequired: usdToWeiAtBtcPrice(priceUsd, btcUsd).toString(),
-    payTo: PROJECT_PAYMENT_ADDRESS,
+    payTo,
     resource: args.resource,
     description,
     mimeType: "application/json",
