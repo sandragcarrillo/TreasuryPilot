@@ -43,11 +43,11 @@ export function Navbar() {
           <Link href="/" className="flex items-center gap-2.5 group">
             <img
               src="/logo.svg"
-              alt="Treasury Pilot"
+              alt="Axiom Pilot"
               className="w-9 h-9 opacity-90 group-hover:opacity-100 transition-opacity"
             />
             <span className="text-base font-medium text-text group-hover:text-accent transition-colors tracking-tight">
-              Treasury Pilot
+              Axiom Pilot
             </span>
           </Link>
         </div>

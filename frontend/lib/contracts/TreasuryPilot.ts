@@ -5,7 +5,6 @@ import type {
   Proposal,
   Report,
   ProgramBudgetStatus,
-  TransactionReceipt,
 } from "./types";
 
 const RPC_URL =
@@ -35,18 +34,6 @@ class TreasuryPilot {
       account: address as `0x${string}`,
     };
     this.client = createClient(config);
-  }
-
-  private async pollUntil(
-    condition: () => Promise<boolean>,
-    retries: number,
-    interval: number
-  ): Promise<void> {
-    for (let i = 0; i < retries; i++) {
-      if (await condition()) return;
-      if (i < retries - 1) await new Promise((r) => setTimeout(r, interval));
-    }
-    throw new Error("Contract state not updated after timeout");
   }
 
   // ─── Read: Organization ──────────────────────────────────────────────────
@@ -79,12 +66,14 @@ class TreasuryPilot {
     const results = await Promise.allSettled(
       Array.from({ length: count }, (_, i) => this.getOrg(i))
     );
-    return results
-      .filter(
-        (r): r is PromiseFulfilledResult<Organization> =>
-          r.status === "fulfilled"
-      )
-      .map((r) => r.value);
+    const successes = results.filter(
+      (r): r is PromiseFulfilledResult<Organization> =>
+        r.status === "fulfilled"
+    );
+    if (successes.length === 0) {
+      throw new Error("All org reads failed — RPC busy; will retry");
+    }
+    return successes.map((r) => r.value);
   }
 
   async getOrgAdmins(orgId: number): Promise<string[]> {
@@ -93,6 +82,19 @@ class TreasuryPilot {
         address: this.contractAddress,
         functionName: "get_org_admins",
         args: [orgId],
+      });
+      return JSON.parse(typeof raw === "string" ? raw : "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  async getProposalTeam(proposalId: number): Promise<string[]> {
+    try {
+      const raw: any = await this.client.readContract({
+        address: this.contractAddress,
+        functionName: "get_proposal_team",
+        args: [proposalId],
       });
       return JSON.parse(typeof raw === "string" ? raw : "[]");
     } catch {
@@ -130,13 +132,13 @@ class TreasuryPilot {
     const results = await Promise.allSettled(
       Array.from({ length: count }, (_, i) => this.getProposal(i))
     );
-    return results
-      .filter(
-        (r): r is PromiseFulfilledResult<Proposal> =>
-          r.status === "fulfilled"
-      )
-      .map((r) => r.value)
-      .filter((p) => p.org_id === orgId);
+    const successes = results.filter(
+      (r): r is PromiseFulfilledResult<Proposal> => r.status === "fulfilled"
+    );
+    if (successes.length === 0) {
+      throw new Error("All proposal reads failed — RPC busy; will retry");
+    }
+    return successes.map((r) => r.value).filter((p) => p.org_id === orgId);
   }
 
   async getAllProposals(): Promise<Proposal[]> {
@@ -145,12 +147,13 @@ class TreasuryPilot {
     const results = await Promise.allSettled(
       Array.from({ length: count }, (_, i) => this.getProposal(i))
     );
-    return results
-      .filter(
-        (r): r is PromiseFulfilledResult<Proposal> =>
-          r.status === "fulfilled"
-      )
-      .map((r) => r.value);
+    const successes = results.filter(
+      (r): r is PromiseFulfilledResult<Proposal> => r.status === "fulfilled"
+    );
+    if (successes.length === 0) {
+      throw new Error("All proposal reads failed — RPC busy; will retry");
+    }
+    return successes.map((r) => r.value);
   }
 
   // ─── Read: Reports ───────────────────────────────────────────────────────
@@ -185,11 +188,18 @@ class TreasuryPilot {
         this.getReport(proposalId, i)
       )
     );
-    return results
-      .filter(
-        (r): r is PromiseFulfilledResult<Report> => r.status === "fulfilled"
-      )
-      .map((r) => r.value);
+    const successes = results.filter(
+      (r): r is PromiseFulfilledResult<Report> => r.status === "fulfilled"
+    );
+    // If every read failed (transient RPC issue while a tx is mid-flight),
+    // throw so TanStack keeps the previous successful data instead of
+    // overwriting the UI with an empty list.
+    if (successes.length === 0) {
+      throw new Error(
+        "All report reads failed — RPC may be busy processing a tx; will retry"
+      );
+    }
+    return successes.map((r) => r.value);
   }
 
   // ─── Read: Budget ────────────────────────────────────────────────────────
@@ -207,249 +217,6 @@ class TreasuryPilot {
     } catch {
       return {};
     }
-  }
-
-  // ─── Write: Organization ─────────────────────────────────────────────────
-
-  async createOrg(
-    name: string,
-    constitution: string,
-    onSubmitted?: (txHash: string) => void
-  ): Promise<TransactionReceipt> {
-    const initialCount = await this.getOrgCount();
-
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "create_org",
-      args: [name, constitution],
-      value: BigInt(0),
-    });
-
-    console.log("[TreasuryPilot] create_org tx:", txHash);
-    onSubmitted?.(txHash as string);
-
-    await this.pollUntil(
-      async () => (await this.getOrgCount()) > initialCount,
-      216,
-      5000
-    );
-
-    console.log("[TreasuryPilot] create_org confirmed");
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
-  }
-
-  async updateConstitution(
-    orgId: number,
-    newConstitution: string
-  ): Promise<TransactionReceipt> {
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "update_constitution",
-      args: [orgId, newConstitution],
-      value: BigInt(0),
-    });
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
-  }
-
-  async setAutoApprove(
-    orgId: number,
-    enabled: boolean,
-    thresholdUsd: string,
-    vetoWindowHours: number
-  ): Promise<TransactionReceipt> {
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "set_auto_approve",
-      args: [orgId, enabled, thresholdUsd, vetoWindowHours],
-      value: BigInt(0),
-    });
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
-  }
-
-  async addAdmin(
-    orgId: number,
-    adminAddress: string
-  ): Promise<TransactionReceipt> {
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "add_admin",
-      args: [orgId, adminAddress],
-      value: BigInt(0),
-    });
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
-  }
-
-  async removeAdmin(
-    orgId: number,
-    adminAddress: string
-  ): Promise<TransactionReceipt> {
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "remove_admin",
-      args: [orgId, adminAddress],
-      value: BigInt(0),
-    });
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
-  }
-
-  async transferOwnership(
-    orgId: number,
-    newOwner: string
-  ): Promise<TransactionReceipt> {
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "transfer_ownership",
-      args: [orgId, newOwner],
-      value: BigInt(0),
-    });
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
-  }
-
-  // ─── Write: Proposals ────────────────────────────────────────────────────
-
-  async submitProposal(
-    orgId: number,
-    title: string,
-    description: string,
-    requestedAmountUsd: string,
-    recipient: string,
-    targetProgram: string,
-    rationale: string,
-    onSubmitted?: (txHash: string) => void
-  ): Promise<TransactionReceipt> {
-    const initialCount = await this.getProposalCount();
-
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "submit_proposal",
-      args: [
-        orgId,
-        title,
-        description,
-        requestedAmountUsd,
-        recipient,
-        targetProgram,
-        rationale,
-      ],
-      value: BigInt(0),
-    });
-
-    console.log("[TreasuryPilot] submit_proposal tx:", txHash);
-    onSubmitted?.(txHash as string);
-
-    await this.pollUntil(
-      async () => (await this.getProposalCount()) > initialCount,
-      216,
-      5000
-    );
-
-    console.log("[TreasuryPilot] submit_proposal confirmed");
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
-  }
-
-  async evaluateProposal(proposalId: number): Promise<TransactionReceipt> {
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "evaluate_proposal",
-      args: [proposalId],
-      value: BigInt(0),
-    });
-
-    console.log("[TreasuryPilot] evaluate_proposal tx:", txHash);
-
-    await this.pollUntil(
-      async () => {
-        try {
-          const p = await this.getProposal(proposalId);
-          return p.evaluated === true;
-        } catch {
-          return false;
-        }
-      },
-      216,
-      5000
-    );
-
-    console.log("[TreasuryPilot] evaluate_proposal confirmed");
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
-  }
-
-  async vetoProposal(proposalId: number): Promise<TransactionReceipt> {
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "veto_proposal",
-      args: [proposalId],
-      value: BigInt(0),
-    });
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
-  }
-
-  // ─── Write: Reports ──────────────────────────────────────────────────────
-
-  async submitReport(
-    proposalId: number,
-    milestonesCompleted: string,
-    fundsSpentUsd: string,
-    deliverables: string,
-    evidenceUrls: string,
-    onSubmitted?: (txHash: string) => void
-  ): Promise<TransactionReceipt> {
-    const initialCount = await this.getReportCount(proposalId);
-
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "submit_report",
-      args: [
-        proposalId,
-        milestonesCompleted,
-        fundsSpentUsd,
-        deliverables,
-        evidenceUrls,
-      ],
-      value: BigInt(0),
-    });
-
-    console.log("[TreasuryPilot] submit_report tx:", txHash);
-    onSubmitted?.(txHash as string);
-
-    await this.pollUntil(
-      async () => (await this.getReportCount(proposalId)) > initialCount,
-      216,
-      5000
-    );
-
-    console.log("[TreasuryPilot] submit_report confirmed");
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
-  }
-
-  async evaluateReport(
-    proposalId: number,
-    reportNumber: number
-  ): Promise<TransactionReceipt> {
-    const txHash = await this.client.writeContract({
-      address: this.contractAddress,
-      functionName: "evaluate_report",
-      args: [proposalId, reportNumber],
-      value: BigInt(0),
-    });
-
-    console.log("[TreasuryPilot] evaluate_report tx:", txHash);
-
-    await this.pollUntil(
-      async () => {
-        try {
-          const r = await this.getReport(proposalId, reportNumber);
-          return r.evaluated === true;
-        } catch {
-          return false;
-        }
-      },
-      216,
-      5000
-    );
-
-    console.log("[TreasuryPilot] evaluate_report confirmed");
-    return { hash: txHash as string, status: "ACCEPTED" } as TransactionReceipt;
   }
 }
 

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TreasuryPilot",
+  title: "Axiom Pilot",
   description: "AI-powered grants evaluation on GenLayer. Proposals evaluated against your organization's constitution by decentralized AI validators.",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],

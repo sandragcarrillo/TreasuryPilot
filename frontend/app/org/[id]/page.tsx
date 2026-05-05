@@ -2,20 +2,25 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Settings, Users, Shield } from "lucide-react";
+import { ArrowLeft, Plus, Settings, Users, Shield, History, AlertTriangle, Clock, Pencil } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { ProgramCard, parsePrograms } from "@/components/CouncilCard";
 import { ConstitutionViewer } from "@/components/ConstitutionViewer";
 import { ProposalDocket } from "@/components/ProposalDocket";
 import { SubmitProposalModal } from "@/components/SubmitProposalModal";
+import { EditConstitutionModal } from "@/components/EditConstitutionModal";
+import { AppealsPanel } from "@/components/AppealsPanel";
 import {
   useOrg,
   useOrgProposals,
   useOrgAdmins,
   useProgramBudgetStatus,
   useSetAutoApprove,
+  useSetHistoricalBaseline,
+  useSetModificationWindow,
   useAddAdmin,
   useRemoveAdmin,
+  useTransferOwnership,
 } from "@/lib/hooks/useTreasuryPilot";
 import { useWallet } from "@/lib/genlayer/wallet";
 
@@ -31,6 +36,7 @@ export default function OrgPage() {
   const { data: budgetStatus = {} } = useProgramBudgetStatus(isNaN(orgId) ? null : orgId);
   const [showSubmit, setShowSubmit] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showEditConstitution, setShowEditConstitution] = useState(false);
 
   const programs = org ? parsePrograms(org.constitution) : [];
   const isOwner = org && address && org.owner.toLowerCase() === address.toLowerCase();
@@ -110,12 +116,29 @@ export default function OrgPage() {
           {showSettings && canManage && (
             <div className="space-y-4 animate-fade-in">
               {isOwner && <AutoApprovePanel orgId={orgId} org={org} />}
+              {isOwner && <ModificationWindowPanel orgId={orgId} org={org} />}
+              {isOwner && <AppealsPanel orgId={orgId} org={org} />}
+              {isOwner && <HistoricalBaselinePanel orgId={orgId} org={org} />}
               {isOwner && <AdminPanel orgId={orgId} admins={admins} />}
+              {isOwner && <TransferOwnershipPanel orgId={orgId} currentOwner={org.owner} />}
             </div>
           )}
 
           {/* Constitution */}
-          <ConstitutionViewer constitution={org.constitution} daoName={org.name} />
+          <div className="space-y-3">
+            {canManage && (
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowEditConstitution(true)}
+                  className="flex items-center gap-2 text-[11px] font-mono tracking-[0.2em] text-accent hover:text-accent/80 transition-colors"
+                >
+                  <Pencil className="w-3 h-3" />
+                  Edit constitution
+                </button>
+              </div>
+            )}
+            <ConstitutionViewer constitution={org.constitution} daoName={org.name} />
+          </div>
 
           {/* Grant Programs + Budget */}
           {programs.length > 0 && (
@@ -169,7 +192,7 @@ export default function OrgPage() {
             <div className="flex items-end justify-between border-b border-border-soft pb-4">
               <div className="flex items-baseline gap-3">
                 <h2 className="text-[11px] font-mono tracking-[0.25em] text-text-faint">
-                  Grant Proposal Docket
+                  Grants Proposals
                 </h2>
                 <span className="font-mono text-[11px] text-text-faint">
                   {proposals.length.toString().padStart(2, "0")}
@@ -199,6 +222,15 @@ export default function OrgPage() {
           programs={programs}
           onClose={() => setShowSubmit(false)}
           onSuccess={() => refetch()}
+        />
+      )}
+
+      {showEditConstitution && (
+        <EditConstitutionModal
+          orgId={orgId}
+          orgName={org.name}
+          currentConstitution={org.constitution}
+          onClose={() => setShowEditConstitution(false)}
         />
       )}
     </div>
@@ -331,6 +363,128 @@ function AutoApprovePanel({ orgId, org }: { orgId: number; org: any }) {
   );
 }
 
+// ─── Modification Window Panel ───────────────────────────────────────────────
+
+function ModificationWindowPanel({ orgId, org }: { orgId: number; org: any }) {
+  const [hours, setHours] = useState(String(org.modification_window_hours || 48));
+  const { mutateAsync, isPending } = useSetModificationWindow();
+
+  const parsed = parseInt(hours, 10);
+  const valid = Number.isFinite(parsed) && parsed >= 1 && parsed <= 720;
+  const dirty = valid && parsed !== Number(org.modification_window_hours);
+
+  const handleSave = async () => {
+    if (!valid) return;
+    try {
+      await mutateAsync({ orgId, hours: parsed });
+    } catch {}
+  };
+
+  return (
+    <div className="gov-card p-8 space-y-6">
+      <div className="flex items-center gap-2.5 border-b border-border-soft pb-4">
+        <Clock className="w-4 h-4 text-accent" />
+        <h3 className="text-[11px] font-mono tracking-[0.25em] text-text-dim">
+          Modification Window
+        </h3>
+      </div>
+
+      <div className="space-y-5">
+        <p className="text-xs text-text-dim leading-relaxed">
+          When a proposal comes back as <span className="text-warning">Needs modification</span>,
+          the submitter has this many hours to revise it before the window closes
+          and the proposal can no longer be edited.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="space-y-2">
+            <label className="text-[10px] font-mono tracking-[0.2em] text-text-faint block">
+              Window (hours)
+            </label>
+            <input
+              className="gov-input w-full px-3 py-2.5 text-sm font-mono"
+              placeholder="48"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              inputMode="numeric"
+            />
+            <p className="text-[11px] text-text-faint leading-relaxed">
+              Allowed range: 1 – 720 hours (30 days). Default 48.
+            </p>
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <button
+            onClick={handleSave}
+            disabled={isPending || !dirty}
+            className="px-5 py-2.5 rounded-xl text-[11px] font-mono tracking-[0.2em] bg-accent text-bg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {isPending ? "Saving…" : "Save Window"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Historical Baseline Panel ───────────────────────────────────────────────
+
+function HistoricalBaselinePanel({ orgId, org }: { orgId: number; org: any }) {
+  const [enabled, setEnabled] = useState(!!org.use_historical_baseline);
+  const { mutateAsync, isPending } = useSetHistoricalBaseline();
+
+  const handleSave = async () => {
+    try {
+      await mutateAsync({ orgId, enabled });
+    } catch {}
+  };
+
+  const dirty = enabled !== !!org.use_historical_baseline;
+
+  return (
+    <div className="gov-card p-8 space-y-6">
+      <div className="flex items-center gap-2.5 border-b border-border-soft pb-4">
+        <History className="w-4 h-4 text-accent" />
+        <h3 className="text-[11px] font-mono tracking-[0.25em] text-text-dim">
+          Historical Baseline
+        </h3>
+      </div>
+
+      <div className="space-y-5">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+            className="w-4 h-4 mt-0.5 accent-accent"
+          />
+          <span className="text-sm text-text font-body">
+            Use prior grant history when AI evaluates new proposals
+            <span className="block mt-1 text-[11px] text-text-faint leading-relaxed font-normal">
+              When enabled, the AI receives an aggregate of past approved grants in the
+              same program (median amount, count, delivery rate from progress reports)
+              and is asked to flag size anomalies and execution risk. Recommended only
+              after the program has run several grants — leave off until you have a
+              meaningful track record.
+            </span>
+          </span>
+        </label>
+
+        <div className="pt-2">
+          <button
+            onClick={handleSave}
+            disabled={isPending || !dirty}
+            className="px-5 py-2.5 rounded-xl text-[11px] font-mono tracking-[0.2em] bg-accent text-bg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {isPending ? "Saving…" : "Save Setting"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Admin Management Panel ──────────────────────────────────────────────────
 
 function AdminPanel({ orgId, admins }: { orgId: number; admins: string[] }) {
@@ -399,6 +553,128 @@ function AdminPanel({ orgId, admins }: { orgId: number; admins: string[] }) {
         >
           {adding ? "Adding…" : "Add Admin"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Transfer Ownership Panel ────────────────────────────────────────────────
+
+function TransferOwnershipPanel({
+  orgId,
+  currentOwner,
+}: {
+  orgId: number;
+  currentOwner: string;
+}) {
+  const [newOwner, setNewOwner] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const { mutateAsync, isPending } = useTransferOwnership();
+
+  const isHexAddress = /^0x[a-fA-F0-9]{40}$/.test(newOwner.trim());
+  const isSameAsCurrent =
+    isHexAddress && newOwner.trim().toLowerCase() === currentOwner.toLowerCase();
+  const valid = isHexAddress && !isSameAsCurrent;
+
+  const handleTransfer = async () => {
+    if (!valid || !confirmed) return;
+    const sure = window.confirm(
+      `Transfer ownership of this organization to ${newOwner.trim()}?\n\n` +
+        `This action CANNOT be undone. The new owner will have full control of this org. ` +
+        `If the address is wrong, the org is lost.`
+    );
+    if (!sure) return;
+    try {
+      await mutateAsync({ orgId, newOwner: newOwner.trim() });
+      setNewOwner("");
+      setConfirmed(false);
+    } catch {}
+  };
+
+  return (
+    <div className="gov-card p-8 space-y-6">
+      <div className="flex items-center gap-2.5 border-b border-border-soft pb-4">
+        <AlertTriangle className="w-4 h-4 text-danger" />
+        <h3 className="text-[11px] font-mono tracking-[0.25em] text-text-dim">
+          Transfer Ownership
+        </h3>
+      </div>
+
+      <div className="rounded-xl border border-danger/30 bg-danger/5 p-4 flex gap-3">
+        <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+        <div className="text-xs text-text-dim leading-relaxed space-y-1">
+          <p className="text-danger font-medium">
+            This action cannot be undone.
+          </p>
+          <p>
+            Once you transfer ownership, the new wallet has full control of this
+            organization. Double-check the address before confirming. If you enter
+            a wrong wallet (typo, wrong network), the organization is lost.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <label className="text-[10px] font-mono tracking-[0.2em] text-text-faint block">
+            Current Owner
+          </label>
+          <code className="block text-xs font-mono text-text-dim break-all">
+            {currentOwner}
+          </code>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-mono tracking-[0.2em] text-text-faint block">
+            New Owner Address
+          </label>
+          <input
+            className="gov-input w-full px-3 py-2.5 text-sm font-mono"
+            placeholder="0x..."
+            value={newOwner}
+            onChange={(e) => {
+              setNewOwner(e.target.value);
+              setConfirmed(false);
+            }}
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {newOwner.trim().length > 0 && !isHexAddress && (
+            <p className="text-[11px] text-danger">
+              Must be a valid 0x-prefixed EVM address (40 hex chars).
+            </p>
+          )}
+          {isSameAsCurrent && (
+            <p className="text-[11px] text-warning">
+              That&apos;s the current owner — pick a different address.
+            </p>
+          )}
+        </div>
+
+        {valid && (
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+              className="w-4 h-4 mt-0.5 accent-accent"
+            />
+            <span className="text-xs text-text-dim leading-relaxed font-body">
+              I have verified the recipient address character-by-character and
+              understand this transfer is final.
+            </span>
+          </label>
+        )}
+
+        <div className="pt-2">
+          <button
+            onClick={handleTransfer}
+            disabled={isPending || !valid || !confirmed}
+            className="px-5 py-2.5 rounded-xl text-[11px] font-mono tracking-[0.2em] text-danger border border-danger/50 hover:bg-danger/10 hover:border-danger/70 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            {isPending ? "Transferring…" : "Transfer Ownership"}
+          </button>
+        </div>
       </div>
     </div>
   );

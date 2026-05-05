@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, LogOut, AlertCircle, ExternalLink } from "lucide-react";
+import { User, LogOut, AlertCircle, ExternalLink, Check } from "lucide-react";
 import { useWallet } from "@/lib/genlayer/wallet";
 import { error, userRejected } from "@/lib/utils/toast";
 import { AddressDisplay } from "./AddressDisplay";
@@ -23,23 +23,24 @@ export function AccountPanel() {
     address,
     isConnected,
     isMetaMaskInstalled,
-    isOnCorrectNetwork,
+    isOnSupportedChain,
+    currentChain,
+    supportedChains,
     isLoading,
     connectWallet,
     disconnectWallet,
     switchWalletAccount,
+    switchToChain,
   } = useWallet();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [connectionError, setConnectionError] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
+  const [switchingChainId, setSwitchingChainId] = useState<number | null>(null);
 
   const handleConnect = async () => {
-    if (!isMetaMaskInstalled) {
-      return;
-    }
-
+    if (!isMetaMaskInstalled) return;
     try {
       setIsConnecting(true);
       setConnectionError("");
@@ -48,14 +49,6 @@ export function AccountPanel() {
     } catch (err: any) {
       console.error("Failed to connect wallet:", err);
       setConnectionError(err.message || "Failed to connect to MetaMask");
-
-      if (err.message?.includes("rejected")) {
-        userRejected("Connection cancelled");
-      } else {
-        error("Failed to connect wallet", {
-          description: err.message || "Check your MetaMask and try again."
-        });
-      }
     } finally {
       setIsConnecting(false);
     }
@@ -71,16 +64,10 @@ export function AccountPanel() {
       setIsSwitching(true);
       setConnectionError("");
       await switchWalletAccount();
-      // Keep modal open to show new account info
     } catch (err: any) {
-      console.error("Failed to switch account:", err);
-
-      // Don't show error if user cancelled
       if (!err.message?.includes("rejected")) {
         setConnectionError(err.message || "Failed to switch account");
-        error("Failed to switch account", {
-          description: err.message || "Please try again."
-        });
+        error("Failed to switch account", { description: err.message || "Try again." });
       } else {
         userRejected("Account switch cancelled");
       }
@@ -89,7 +76,24 @@ export function AccountPanel() {
     }
   };
 
-  // Not connected state
+  const handleSwitchChain = async (chainId: number) => {
+    try {
+      setSwitchingChainId(chainId);
+      setConnectionError("");
+      await switchToChain(chainId);
+    } catch (err: any) {
+      if (!err.message?.includes("rejected") && err?.code !== 4001) {
+        setConnectionError(err.message || "Failed to switch chain");
+        error("Failed to switch chain", { description: err.message || "Try again." });
+      } else {
+        userRejected("Chain switch cancelled");
+      }
+    } finally {
+      setSwitchingChainId(null);
+    }
+  };
+
+  // Not connected
   if (!isConnected) {
     return (
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -101,11 +105,10 @@ export function AccountPanel() {
         </DialogTrigger>
         <DialogContent className="brand-card border-2">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">
-              Connect to GenLayer
-            </DialogTitle>
+            <DialogTitle className="text-2xl font-bold">Connect Wallet</DialogTitle>
             <DialogDescription>
-              Connect your MetaMask wallet to interact with TreasuryPilot
+              Axiom Pilot accepts payments on multiple chains. Connect your wallet on
+              any of them.
             </DialogDescription>
           </DialogHeader>
 
@@ -116,8 +119,8 @@ export function AccountPanel() {
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>MetaMask Not Detected</AlertTitle>
                   <AlertDescription>
-                    Please install MetaMask to continue. MetaMask is a crypto
-                    wallet that allows you to interact with blockchain applications.
+                    Install MetaMask to continue. It&apos;s a crypto wallet that lets you
+                    interact with blockchain applications.
                   </AlertDescription>
                 </Alert>
 
@@ -129,13 +132,6 @@ export function AccountPanel() {
                   <ExternalLink className="w-5 h-5 mr-2" />
                   Install MetaMask
                 </Button>
-
-                <div className="p-4 rounded-lg bg-muted/10 border border-muted/20">
-                  <p className="text-xs text-muted-foreground">
-                    After installing MetaMask, refresh this page and click
-                    &quot;Connect Wallet&quot; again.
-                  </p>
-                </div>
               </>
             ) : (
               <>
@@ -157,15 +153,18 @@ export function AccountPanel() {
                   </Alert>
                 )}
 
-                <div className="p-4 rounded-lg bg-muted/10 border border-muted/20">
-                  <p className="text-xs text-muted-foreground">
-                    This will open MetaMask and prompt you to:
-                  </p>
-                  <ol className="text-xs text-muted-foreground list-decimal list-inside mt-2 space-y-1">
-                    <li>Connect your wallet to this application</li>
-                    <li>Add the GenLayer network to MetaMask</li>
-                    <li>Switch to the GenLayer network</li>
-                  </ol>
+                <div className="p-4 rounded-xl bg-bg-elev-2 border border-border-soft">
+                  <p className="text-xs font-mono text-text-faint mb-2">Supported chains</p>
+                  <ul className="space-y-1.5">
+                    {supportedChains.map((c) => (
+                      <li key={c.id} className="flex items-center justify-between text-xs">
+                        <span className="text-text-dim">{c.name}</span>
+                        <span className="text-text-faint font-mono">
+                          pay with {c.paymentAsset.symbol}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </>
             )}
@@ -175,7 +174,7 @@ export function AccountPanel() {
     );
   }
 
-  // Connected state
+  // Connected
   return (
     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
       <div className="flex items-center gap-4">
@@ -195,12 +194,8 @@ export function AccountPanel() {
 
       <DialogContent className="brand-card border-2">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">
-            Wallet Details
-          </DialogTitle>
-          <DialogDescription>
-            Your connected MetaMask wallet information
-          </DialogDescription>
+          <DialogTitle className="text-2xl font-bold">Wallet Details</DialogTitle>
+          <DialogDescription>Your connected wallet and payment chain</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
@@ -209,34 +204,44 @@ export function AccountPanel() {
             <code className="text-sm font-mono break-all">{address}</code>
           </div>
 
-          <div className="brand-card p-4 space-y-2">
-            <p className="text-sm text-muted-foreground">Network Status</p>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isOnCorrectNetwork
-                    ? "bg-green-500"
-                    : "bg-yellow-500 animate-pulse"
-                }`}
-              />
-              <span className="text-sm">
-                {isOnCorrectNetwork
-                  ? "Connected to GenLayer"
-                  : "Wrong Network"}
-              </span>
+          <div className="brand-card p-4 space-y-3">
+            <p className="text-sm text-muted-foreground">Payment Chain</p>
+            {isOnSupportedChain && currentChain ? (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-accent" />
+                <span className="text-sm">
+                  {currentChain.name} — pay with {currentChain.paymentAsset.symbol}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-warning animate-pulse" />
+                <span className="text-sm">Unsupported chain — pick one below</span>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 pt-2">
+              {supportedChains.map((c) => {
+                const active = currentChain?.id === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => handleSwitchChain(c.id)}
+                    disabled={switchingChainId !== null}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono transition-all ${
+                      active
+                        ? "border-accent/60 bg-accent/10 text-accent"
+                        : "border-border-soft text-text-dim hover:border-accent/40 hover:text-text"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {active && <Check className="w-3 h-3" />}
+                    {c.shortName}
+                    {switchingChainId === c.id && " ..."}
+                  </button>
+                );
+              })}
             </div>
           </div>
-
-          {!isOnCorrectNetwork && (
-            <Alert variant="default" className="bg-yellow-500/10 border-yellow-500/20">
-              <AlertCircle className="h-4 w-4 text-yellow-500" />
-              <AlertTitle>Network Warning</AlertTitle>
-              <AlertDescription>
-                You&apos;re not on the GenLayer network. Please switch networks in
-                MetaMask or try reconnecting.
-              </AlertDescription>
-            </Alert>
-          )}
 
           {connectionError && (
             <Alert variant="destructive">
@@ -266,14 +271,6 @@ export function AccountPanel() {
               <LogOut className="w-4 h-4 mr-2" />
               Disconnect Wallet
             </Button>
-          </div>
-
-          <div className="p-4 rounded-lg bg-muted/10 border border-muted/20">
-            <p className="text-xs text-muted-foreground">
-              Use &quot;Switch Account&quot; to select a different MetaMask
-              account. Use &quot;Disconnect&quot; to remove this site from
-              MetaMask.
-            </p>
           </div>
         </div>
       </DialogContent>

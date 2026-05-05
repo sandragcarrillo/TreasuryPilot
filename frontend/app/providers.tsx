@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
-import { WalletProvider } from "@/lib/genlayer/WalletProvider";
+import { WalletProvider } from "@/lib/wallet/provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   // Use useState to ensure QueryClient is only created once per component lifecycle

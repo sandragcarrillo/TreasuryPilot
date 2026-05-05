@@ -1,11 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, FileText, ExternalLink } from "lucide-react";
+import { ArrowLeft, FileText, ExternalLink, Pencil, Clock } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { AddressDisplay } from "@/components/AddressDisplay";
 import { EvaluationOverlay } from "@/components/EvaluationOverlay";
+import { RichText, normalizeReasoning, splitConfidence } from "@/components/RichText";
+import { UpdateProposalModal } from "@/components/UpdateProposalModal";
+import { TeamMembersPanel } from "@/components/TeamMembersPanel";
+import { AppealModal } from "@/components/AppealModal";
+import {
+  ProposalHumanDecisionPanel,
+  ReportHumanDecisionPanel,
+  HumanVerdictPill,
+  HumanActionPill,
+} from "@/components/HumanDecisionPanel";
+import {
+  PreliminaryProposalCard,
+  PreliminaryReportCard,
+} from "@/components/PreliminaryVerdictCard";
+import { parsePrograms } from "@/components/CouncilCard";
 import {
   useProposal,
   useOrg,
@@ -13,10 +28,17 @@ import {
   useEvaluateProposal,
   useVetoProposal,
   useProposalReports,
+  useProposalTeam,
   useSubmitReport,
   useEvaluateReport,
 } from "@/lib/hooks/useTreasuryPilot";
+import { usePendingEvaluation, usePendingReportEvaluation } from "@/lib/hooks/usePendingEvaluation";
+import {
+  useUndeterminedProposalOutput,
+  useUndeterminedReportOutput,
+} from "@/lib/hooks/useUndeterminedOutput";
 import { useWallet } from "@/lib/genlayer/wallet";
+import { PaymentNote } from "@/components/PaymentNote";
 
 // ─── Label / color maps ─────────────────────────────────────────────────────
 
@@ -89,7 +111,30 @@ const ROI_STATUS_PILL: Record<string, { label: string; cls: string }> = {
   on_track: { label: "On track", cls: "text-accent border-accent/40 bg-accent/10" },
   at_risk: { label: "At risk", cls: "text-warning border-warning/40 bg-warning/10" },
   exceeding: { label: "Exceeding", cls: "text-accent border-accent/40 bg-accent/10" },
+  pivoted: { label: "Pivoted", cls: "text-vetoed border-vetoed/40 bg-vetoed/10" },
   failed: { label: "Failed", cls: "text-danger border-danger/40 bg-danger/10" },
+};
+
+const RECOMMENDED_ACTION_PILL: Record<
+  string,
+  { label: string; cls: string }
+> = {
+  continue_funding: {
+    label: "Continue funding",
+    cls: "text-accent border-accent/40 bg-accent/10",
+  },
+  pause_pending_clarification: {
+    label: "Pause pending clarification",
+    cls: "text-warning border-warning/40 bg-warning/10",
+  },
+  claw_back: {
+    label: "Claw back",
+    cls: "text-danger border-danger/40 bg-danger/10",
+  },
+  terminate: {
+    label: "Terminate",
+    cls: "text-danger border-danger/40 bg-danger/10",
+  },
 };
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -104,19 +149,77 @@ export default function ProposalPage() {
   const { data: org } = useOrg(proposal?.org_id ?? null);
   const { data: admins = [] } = useOrgAdmins(proposal?.org_id ?? null);
   const { data: reports = [], refetch: refetchReports } = useProposalReports(isNaN(proposalId) ? null : proposalId);
+  const { data: team = [] } = useProposalTeam(isNaN(proposalId) ? null : proposalId);
   const { mutateAsync: evaluate, isPending: evaluating } = useEvaluateProposal();
   const { mutateAsync: veto, isPending: vetoing } = useVetoProposal();
 
+  const {
+    isPending: evaluationPending,
+    elapsedMinutes,
+    txHash: evalTxHash,
+    markPending: markEvaluationPending,
+  } = usePendingEvaluation({
+    proposalId: isNaN(proposalId) ? null : proposalId,
+    isEvaluated: proposal?.evaluated,
+  });
+
+  const { data: undeterminedProposal } = useUndeterminedProposalOutput({
+    txHash: evalTxHash,
+    enabled: evaluationPending,
+  });
+  const showPreliminaryProposal =
+    !!undeterminedProposal && undeterminedProposal.statusName === "UNDETERMINED";
+
   const [showReportForm, setShowReportForm] = useState(false);
+  const [showRevise, setShowRevise] = useState(false);
+  const [showAppeal, setShowAppeal] = useState(false);
+  // Tick every 30s so the deadline countdown stays current.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   const isOwner = org && address && org.owner.toLowerCase() === address.toLowerCase();
   const isAdmin = admins.some((a) => a.toLowerCase() === address?.toLowerCase());
+  const isSubmitter =
+    !!proposal && !!address && proposal.submitter.toLowerCase() === address.toLowerCase();
   const canVeto = (isOwner || isAdmin) && proposal?.status === "auto_approved";
-  const canReport = proposal && (proposal.status === "approved" || proposal.status === "auto_approved");
+  const isProposalActive =
+    !!proposal &&
+    (proposal.status === "approved" || proposal.status === "auto_approved");
+  const isTeamMember =
+    !!address &&
+    (isSubmitter ||
+      team.some((a) => a.toLowerCase() === address.toLowerCase()));
+  const canSubmitReport = isProposalActive && isTeamMember;
+  // The reports section is visible to anyone once there are reports to read,
+  // for transparency. Submission is gated to submitter + team members only.
+  const showReportSection =
+    isProposalActive && (reports.length > 0 || canSubmitReport);
+  const programs = useMemo(() => (org ? parsePrograms(org.constitution) : []), [org]);
 
-  const handleEvaluate = async () => {
+  const modificationDeadline =
+    proposal?.modification_deadline ? Date.parse(proposal.modification_deadline) : NaN;
+  // If a deadline is set, enforce it. Otherwise (e.g. legacy proposal evaluated
+  // before deadline tracking shipped), allow revision while status is
+  // needs_modification — the contract will still reject if its own deadline
+  // check fires.
+  const modificationWindowOpen =
+    proposal?.status === "needs_modification" &&
+    (isNaN(modificationDeadline) || modificationDeadline > Date.now());
+  const canRevise = isSubmitter && modificationWindowOpen;
+  const canAppeal =
+    isSubmitter &&
+    proposal?.status === "rejected" &&
+    !!org?.appeals_enabled;
+  const canSetHumanDecision = !!(isOwner || isAdmin);
+
+  const handleEvaluate = async (retryOfTxHash?: string) => {
     try {
-      await evaluate(proposalId);
+      const result = await evaluate({ proposalId, retryOfTxHash });
+      const hash = result?.data?.genlayerTxHash;
+      markEvaluationPending(typeof hash === "string" ? hash : undefined);
       refetch();
     } catch {}
   };
@@ -198,11 +301,19 @@ export default function ProposalPage() {
                   </>
                 )}
               </div>
-              <span
-                className={`text-[11px] font-mono border rounded-full px-3 py-1 ${statusPill.cls}`}
-              >
-                {statusPill.label}
-              </span>
+              <div className="flex flex-wrap items-center gap-2 justify-end">
+                <span
+                  className={`text-[11px] font-mono border rounded-full px-3 py-1 ${statusPill.cls}`}
+                >
+                  {statusPill.label}
+                </span>
+                {proposal.appealed && (
+                  <span className="text-[11px] font-mono border border-warning/40 bg-warning/10 text-warning rounded-full px-3 py-1">
+                    Appealed
+                  </span>
+                )}
+                <HumanVerdictPill verdict={proposal.human_verdict} />
+              </div>
             </div>
 
             {/* Title */}
@@ -246,14 +357,49 @@ export default function ProposalPage() {
               />
             </div>
 
-            {/* AI reasoning or empty hint */}
+            {/* AI reasoning, preliminary verdict, deliberating, or empty hint */}
             {proposal.evaluated && proposal.reasoning ? (
-              <div className="space-y-3 reasoning-reveal">
+              <div className="space-y-4 reasoning-reveal">
                 <div className="text-[10px] font-mono text-text-faint tracking-[0.2em]">
                   AI reasoning
                 </div>
-                <p className="text-sm md:text-base text-text-dim leading-relaxed">
-                  {proposal.reasoning}
+                {(() => {
+                  const { body, confidence } = splitConfidence(
+                    proposal.reasoning
+                  );
+                  return (
+                    <>
+                      <RichText text={normalizeReasoning(body)} compact />
+                      {confidence && <ConfidencePill value={confidence} />}
+                    </>
+                  );
+                })()}
+              </div>
+            ) : showPreliminaryProposal && undeterminedProposal && evalTxHash ? (
+              <PreliminaryProposalCard
+                result={undeterminedProposal}
+                onRetry={() => handleEvaluate(evalTxHash)}
+                onModify={() => setShowRevise(true)}
+                retrying={evaluating}
+                canModify={!!isSubmitter}
+              />
+            ) : evaluationPending ? (
+              <div className="rounded-2xl border border-accent/30 bg-accent/5 p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
+                  <span className="text-[11px] font-mono text-accent tracking-[0.2em]">
+                    AI Validators Deliberating
+                  </span>
+                </div>
+                <p className="text-sm text-text-dim leading-relaxed">
+                  Consensus takes up to 15 minutes. The result will appear here
+                  automatically once they agree.
+                  {elapsedMinutes > 0 && (
+                    <span className="text-text-faint">
+                      {" "}
+                      ({elapsedMinutes} min from the request)
+                    </span>
+                  )}
                 </p>
               </div>
             ) : (
@@ -263,16 +409,47 @@ export default function ProposalPage() {
               </div>
             )}
 
+            {/* Modification window banner */}
+            {proposal.status === "needs_modification" && (
+              <ModificationBanner
+                deadlineIso={proposal.modification_deadline || ""}
+                isSubmitter={isSubmitter}
+                canRevise={canRevise}
+                onRevise={() => setShowRevise(true)}
+              />
+            )}
+
             {/* Footer actions */}
-            {(canVeto || (!proposal.evaluated && isConnected)) && (
-              <div className="border-t border-border-soft pt-5 flex flex-wrap gap-3">
-                {!proposal.evaluated && isConnected && (
+            {(canVeto || canRevise || canAppeal || (!proposal.evaluated && !evaluationPending && isConnected)) && (
+              <div className="border-t border-border-soft pt-5 flex flex-wrap items-center gap-3">
+                {!proposal.evaluated && !evaluationPending && isConnected && (
+                  <>
+                    <button
+                      onClick={() => handleEvaluate()}
+                      disabled={evaluating}
+                      className="px-6 py-2.5 rounded-xl text-[11px] font-mono tracking-[0.2em] text-accent border border-accent/50 hover:bg-accent/10 hover:border-accent/70 disabled:opacity-40 transition-all"
+                    >
+                      {evaluating ? "Submitting…" : "Request AI evaluation"}
+                    </button>
+                    <PaymentNote routeId="evaluate-proposal" variant="inline" />
+                  </>
+                )}
+                {canRevise && (
                   <button
-                    onClick={handleEvaluate}
-                    disabled={evaluating}
-                    className="px-6 py-2.5 rounded-xl text-[11px] font-mono tracking-[0.2em] text-accent border border-accent/50 hover:bg-accent/10 hover:border-accent/70 disabled:opacity-40 transition-all"
+                    onClick={() => setShowRevise(true)}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-mono tracking-[0.2em] text-warning border border-warning/50 hover:bg-warning/10 hover:border-warning/70 transition-all"
                   >
-                    Request AI evaluation
+                    <Pencil className="w-3.5 h-3.5" />
+                    Revise proposal
+                  </button>
+                )}
+                {canAppeal && (
+                  <button
+                    onClick={() => setShowAppeal(true)}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-mono tracking-[0.2em] text-warning border border-warning/50 hover:bg-warning/10 hover:border-warning/70 transition-all"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    {proposal.appealed ? "Update appeal" : "File appeal"}
                   </button>
                 )}
                 {canVeto && (
@@ -291,53 +468,126 @@ export default function ProposalPage() {
           {/* Proposal details */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-4">
-              <div className="gov-card p-6 space-y-3">
+              <div className="gov-card p-6 space-y-4">
                 <div className="text-[10px] font-mono tracking-[0.2em] text-text-faint">
                   Description
                 </div>
-                <p className="text-sm text-text-dim leading-relaxed">
-                  {proposal.description}
-                </p>
+                <RichText text={proposal.description} compact />
               </div>
-              <div className="gov-card p-6 space-y-3">
+              <div className="gov-card p-6 space-y-4">
                 <div className="text-[10px] font-mono tracking-[0.2em] text-text-faint">
                   Rationale
                 </div>
-                <p className="text-sm text-text-dim leading-relaxed">
-                  {proposal.rationale}
-                </p>
+                <RichText text={proposal.rationale} compact />
               </div>
             </div>
-            <div className="gov-card p-6 flex flex-col h-fit divide-y divide-border-soft">
-              <DetailRow label="Target program">
-                <span className="text-sm text-text text-right">
-                  {proposal.target_program || "—"}
-                </span>
-              </DetailRow>
-              <DetailRow label="Requested amount">
-                <span className="text-sm text-text text-right font-mono">
-                  ${parseFloat(proposal.requested_amount_usd).toLocaleString()} USD
-                </span>
-              </DetailRow>
-              <DetailRow label="Recipient">
-                <AddressDisplay
-                  address={proposal.recipient}
-                  className="text-sm text-text"
-                  showCopy
-                />
-              </DetailRow>
-              <DetailRow label="Submitter">
-                <AddressDisplay
-                  address={proposal.submitter}
-                  className="text-sm text-text"
-                  showCopy
-                />
-              </DetailRow>
+            <div className="space-y-4 h-fit">
+              <div className="gov-card p-6 flex flex-col divide-y divide-border-soft">
+                <DetailRow label="Target program">
+                  <span className="text-sm text-text text-right">
+                    {proposal.target_program || "—"}
+                  </span>
+                </DetailRow>
+                <DetailRow label="Requested amount">
+                  <span className="text-sm text-text text-right font-mono">
+                    ${parseFloat(proposal.requested_amount_usd).toLocaleString()} USD
+                  </span>
+                </DetailRow>
+                <DetailRow label="Recipient">
+                  <AddressDisplay
+                    address={proposal.recipient}
+                    className="text-sm text-text"
+                    showCopy
+                  />
+                </DetailRow>
+                <DetailRow label="Submitter">
+                  <AddressDisplay
+                    address={proposal.submitter}
+                    className="text-sm text-text"
+                    showCopy
+                  />
+                </DetailRow>
+              </div>
+
+              {/* Reporting team — only the submitter sees this panel, and only
+                  once the proposal has reached a stage where team membership
+                  is meaningful: needs_modification, approved, or auto_approved. */}
+              {isSubmitter &&
+                (proposal.status === "needs_modification" ||
+                  proposal.status === "approved" ||
+                  proposal.status === "auto_approved") && (
+                  <TeamMembersPanel
+                    proposalId={proposalId}
+                    submitter={proposal.submitter}
+                    isSubmitter={!!isSubmitter}
+                  />
+                )}
             </div>
           </div>
 
+          {/* Appeal text — public when filed */}
+          {proposal.appealed && proposal.appeal_text && (
+            <div className="gov-card p-6 md:p-8 space-y-3 border-warning/30 bg-warning/5">
+              <div className="flex items-center gap-2 text-[10px] font-mono tracking-[0.25em] text-warning uppercase">
+                <Pencil className="w-3 h-3" />
+                Submitter's appeal
+                {proposal.appeal_filed_at && (
+                  <span className="text-text-faint normal-case tracking-normal ml-2">
+                    Filed {new Date(proposal.appeal_filed_at).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              <RichText text={proposal.appeal_text} compact />
+            </div>
+          )}
+
+          {/* Human decision — visible to all when set; owners/admins can edit */}
+          {(canSetHumanDecision || proposal.human_verdict) && (
+            canSetHumanDecision ? (
+              <ProposalHumanDecisionPanel
+                proposalId={proposalId}
+                current={{
+                  verdict: proposal.human_verdict,
+                  reason: proposal.human_reason || "",
+                  decided_at: proposal.human_decided_at || "",
+                  decided_by: proposal.human_decided_by || "",
+                }}
+              />
+            ) : (
+              <div className="gov-card p-6 md:p-8 space-y-3">
+                <div className="flex items-center gap-2 text-[10px] font-mono tracking-[0.25em] text-accent uppercase">
+                  Human Decision
+                </div>
+                <div className="text-base text-text">
+                  <HumanVerdictPill verdict={proposal.human_verdict} />
+                </div>
+                {proposal.human_reason && (
+                  <p className="text-sm text-text-dim leading-relaxed">
+                    {proposal.human_reason}
+                  </p>
+                )}
+                {proposal.human_decided_by && (
+                  <div className="flex items-center gap-2 text-[11px] font-mono text-text-faint pt-1">
+                    <span>By</span>
+                    <AddressDisplay
+                      address={proposal.human_decided_by}
+                      className="text-text-dim"
+                      showCopy
+                    />
+                    {proposal.human_decided_at && (
+                      <>
+                        <span className="text-text-faint/40">·</span>
+                        <span>{new Date(proposal.human_decided_at).toLocaleString()}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          )}
+
           {/* Progress Reports */}
-          {canReport && (
+          {showReportSection && (
             <section className="space-y-6 pt-4">
               <div className="flex items-end justify-between border-b border-border-soft pb-4">
                 <div className="flex items-baseline gap-3">
@@ -349,15 +599,21 @@ export default function ProposalPage() {
                     {reports.length.toString().padStart(2, "0")}
                   </span>
                 </div>
-                <button
-                  onClick={() => setShowReportForm((v) => !v)}
-                  className="text-[11px] font-mono tracking-[0.2em] text-accent hover:text-accent/80 transition-colors"
-                >
-                  + Submit report
-                </button>
+                {canSubmitReport ? (
+                  <button
+                    onClick={() => setShowReportForm((v) => !v)}
+                    className="text-[11px] font-mono tracking-[0.2em] text-accent hover:text-accent/80 transition-colors"
+                  >
+                    + Submit report
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-mono tracking-[0.2em] text-text-faint">
+                    Submitter & team only
+                  </span>
+                )}
               </div>
 
-              {showReportForm && (
+              {showReportForm && canSubmitReport && (
                 <ReportForm
                   proposalId={proposalId}
                   onSuccess={() => {
@@ -380,6 +636,7 @@ export default function ProposalPage() {
                       report={report}
                       proposalId={proposalId}
                       onEvaluated={refetchReports}
+                      canSetHumanDecision={canSetHumanDecision}
                     />
                   ))}
                 </div>
@@ -388,6 +645,85 @@ export default function ProposalPage() {
           )}
         </div>
       </main>
+
+      {showRevise && proposal && (
+        <UpdateProposalModal
+          proposal={proposal}
+          programs={programs}
+          defaultWindowHours={org?.modification_window_hours ?? 48}
+          onClose={() => setShowRevise(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
+
+      {showAppeal && proposal && (
+        <AppealModal
+          proposal={proposal}
+          programs={programs}
+          onClose={() => setShowAppeal(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Modification banner ────────────────────────────────────────────────────
+
+function ModificationBanner({
+  deadlineIso,
+  isSubmitter,
+  canRevise,
+  onRevise,
+}: {
+  deadlineIso: string;
+  isSubmitter: boolean;
+  canRevise: boolean;
+  onRevise: () => void;
+}) {
+  const ts = Date.parse(deadlineIso);
+  const hasDeadline = !isNaN(ts);
+  const diff = hasDeadline ? ts - Date.now() : Infinity;
+  const expired = hasDeadline && diff <= 0;
+  const hours = Math.max(0, Math.floor((hasDeadline ? diff : 0) / 3_600_000));
+  const minutes = Math.max(0, Math.floor(((hasDeadline ? diff : 0) % 3_600_000) / 60_000));
+  const days = Math.floor(hours / 24);
+  const hoursOfDay = hours % 24;
+  const remainingLabel = !hasDeadline
+    ? "Open for revision"
+    : expired
+    ? "Modification window closed"
+    : days > 0
+    ? `${days}d ${hoursOfDay}h remaining`
+    : `${hours}h ${minutes}m remaining`;
+
+  const cls = expired
+    ? "border-danger/30 bg-danger/5 text-danger"
+    : "border-warning/30 bg-warning/5 text-warning";
+
+  return (
+    <div className={`rounded-2xl border ${cls} p-4 flex flex-wrap items-center gap-3`}>
+      <Clock className="w-3.5 h-3.5 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="text-[11px] font-mono tracking-[0.2em]">
+          {remainingLabel}
+        </div>
+        <p className="text-xs text-text-dim leading-relaxed mt-1">
+          {expired
+            ? "The submitter cannot revise this proposal anymore. The org owner can extend the modification window in settings."
+            : isSubmitter
+            ? "Revise the proposal to address the AI's required changes, then request a new evaluation."
+            : "The submitter still has time to address the AI's required changes."}
+        </p>
+      </div>
+      {canRevise && (
+        <button
+          onClick={onRevise}
+          className="text-[11px] font-mono tracking-[0.2em] text-warning hover:text-warning/80 transition-colors shrink-0"
+        >
+          Revise →
+        </button>
+      )}
     </div>
   );
 }
@@ -462,14 +798,15 @@ function ReportForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await mutateAsync({
+      const result = await mutateAsync({
         proposalId,
         milestonesCompleted: form.milestones,
         fundsSpentUsd: form.fundsSpent,
         deliverables: form.deliverables,
         evidenceUrls: form.evidenceUrls,
-        onSubmitted: (hash) => setTxHash(hash),
       });
+      const hash = result?.data?.genlayerTxHash;
+      if (typeof hash === "string") setTxHash(hash);
       onSuccess();
     } catch {}
   };
@@ -531,6 +868,8 @@ function ReportForm({
           />
         </div>
 
+        <PaymentNote routeId="submit-report" />
+
         {txHash && (
           <div className="rounded-xl border border-accent/25 bg-accent-bg p-4 space-y-2">
             <div className="flex items-center gap-2">
@@ -581,22 +920,52 @@ function ReportCard({
   report,
   proposalId,
   onEvaluated,
+  canSetHumanDecision,
 }: {
   report: any;
   proposalId: number;
   onEvaluated: () => void;
+  canSetHumanDecision: boolean;
 }) {
   const { mutateAsync: evalReport, isPending } = useEvaluateReport();
   const { isConnected } = useWallet();
+  const [expanded, setExpanded] = useState(false);
 
-  const handleEvaluate = async () => {
+  const {
+    isPending: evalPending,
+    elapsedMinutes,
+    txHash: reportEvalTxHash,
+    markPending,
+  } = usePendingReportEvaluation({
+    proposalId,
+    reportNumber: report.report_number,
+    isEvaluated: report.evaluated,
+  });
+
+  const { data: undeterminedReport } = useUndeterminedReportOutput({
+    txHash: reportEvalTxHash,
+    enabled: evalPending,
+  });
+  const showPreliminaryReport =
+    !!undeterminedReport && undeterminedReport.statusName === "UNDETERMINED";
+
+  const handleEvaluate = async (retryOfTxHash?: string) => {
     try {
-      await evalReport({ proposalId, reportNumber: report.report_number });
+      const result = await evalReport({
+        proposalId,
+        reportNumber: report.report_number,
+        retryOfTxHash,
+      });
+      const hash = result?.data?.genlayerTxHash;
+      markPending(typeof hash === "string" ? hash : undefined);
       onEvaluated();
     } catch {}
   };
 
   const roiPill = ROI_STATUS_PILL[report.roi_status];
+  const actionPill = report.recommended_action
+    ? RECOMMENDED_ACTION_PILL[report.recommended_action]
+    : undefined;
 
   return (
     <div className="rounded-2xl bg-bg-elev border border-border-soft p-6 md:p-8 space-y-5">
@@ -612,62 +981,180 @@ function ReportCard({
               {roiPill.label}
             </span>
           )}
+          {report.evaluated && actionPill && (
+            <span
+              className={`font-mono text-[10px] px-2.5 py-0.5 rounded-full border ${actionPill.cls}`}
+            >
+              {actionPill.label}
+            </span>
+          )}
+          <HumanActionPill action={report.human_action || ""} />
           {report.evaluated && (
             <span className="font-mono text-[11px] text-text-faint">
               Progress <span className="text-text">{report.progress_score}/10</span>
             </span>
           )}
         </div>
-        {!report.evaluated && isConnected && (
-          <button
-            onClick={handleEvaluate}
-            disabled={isPending}
-            className="text-[10px] font-mono tracking-[0.2em] text-accent hover:text-accent/80 disabled:opacity-40 transition-colors shrink-0"
-          >
-            {isPending ? "Evaluating…" : "Evaluate report"}
-          </button>
+        {!report.evaluated && !evalPending && isConnected && (
+          <div className="flex items-center gap-3 shrink-0">
+            <PaymentNote routeId="evaluate-report" variant="inline" />
+            <button
+              onClick={() => handleEvaluate()}
+              disabled={isPending}
+              className="text-[10px] font-mono tracking-[0.2em] text-accent hover:text-accent/80 disabled:opacity-40 transition-colors"
+            >
+              {isPending ? "Submitting…" : "Evaluate report"}
+            </button>
+          </div>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-xs border-y border-border-soft py-4">
-        <div className="space-y-1.5">
-          <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
-            Milestones
-          </span>
-          <p className="text-text-dim">{report.milestones_completed}</p>
-        </div>
-        <div className="space-y-1.5">
-          <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
-            Funds spent
-          </span>
-          <p className="text-text-dim font-mono">${report.funds_spent_usd}</p>
-        </div>
-      </div>
+      {expanded && (
+        <>
+          <div className="grid grid-cols-2 gap-4 text-xs border-y border-border-soft py-4">
+            <div className="space-y-1.5">
+              <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
+                Milestones
+              </span>
+              <p className="text-text-dim">{report.milestones_completed}</p>
+            </div>
+            <div className="space-y-1.5">
+              <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
+                Funds spent
+              </span>
+              <p className="text-text-dim font-mono">${report.funds_spent_usd}</p>
+            </div>
+          </div>
 
-      <div className="text-xs space-y-1.5">
-        <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
-          Deliverables
-        </span>
-        <p className="text-text-dim leading-relaxed text-sm">{report.deliverables}</p>
-      </div>
+          <div className="text-xs space-y-2">
+            <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
+              Deliverables
+            </span>
+            <RichText
+              text={normalizeReasoning(report.deliverables ?? "")}
+              compact
+            />
+          </div>
 
-      {report.evidence_urls && (
-        <div className="text-xs space-y-1.5">
-          <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
-            Evidence
-          </span>
-          <p className="text-accent/80 font-mono break-all">{report.evidence_urls}</p>
+          {report.evidence_urls && (
+            <div className="text-xs space-y-2">
+              <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
+                Evidence
+              </span>
+              <RichText
+                text={normalizeReasoning(report.evidence_urls ?? "")}
+                compact
+              />
+            </div>
+          )}
+
+          {report.evaluated && report.ai_summary && (
+            <div className="border-t border-border-soft pt-4 space-y-3">
+              <span className="font-mono text-accent tracking-[0.25em] text-[10px] uppercase">
+                AI Assessment
+              </span>
+              {(() => {
+                const { body, confidence } = splitConfidence(report.ai_summary);
+                return (
+                  <>
+                    <RichText text={normalizeReasoning(body)} compact />
+                    {confidence && <ConfidencePill value={confidence} />}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {(canSetHumanDecision || report.human_action) &&
+            (canSetHumanDecision ? (
+              <ReportHumanDecisionPanel
+                proposalId={proposalId}
+                reportNumber={report.report_number}
+                current={{
+                  action: report.human_action || "",
+                  reason: report.human_reason || "",
+                  decided_at: report.human_decided_at || "",
+                  decided_by: report.human_decided_by || "",
+                }}
+              />
+            ) : (
+              report.human_reason && (
+                <div className="border-t border-border-soft pt-4 space-y-2">
+                  <span className="font-mono text-accent tracking-[0.25em] text-[10px] uppercase">
+                    Human Decision Reason
+                  </span>
+                  <p className="text-sm text-text-dim leading-relaxed">
+                    {report.human_reason}
+                  </p>
+                </div>
+              )
+            ))}
+        </>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="text-[10px] font-mono tracking-[0.2em] text-text-faint hover:text-accent transition-colors"
+      >
+        {expanded ? "Collapse ↑" : "Read more ↓"}
+      </button>
+
+      {!report.evaluated && showPreliminaryReport && undeterminedReport && reportEvalTxHash && (
+        <div className="border-t border-border-soft pt-4">
+          <PreliminaryReportCard
+            result={undeterminedReport}
+            onRetry={() => handleEvaluate(reportEvalTxHash)}
+            retrying={isPending}
+          />
         </div>
       )}
 
-      {report.evaluated && report.ai_summary && (
-        <div className="border-t border-border-soft pt-4 space-y-1.5">
-          <span className="font-mono text-text-faint tracking-[0.2em] text-[10px]">
-            AI assessment
-          </span>
-          <p className="text-text-dim text-sm leading-relaxed">{report.ai_summary}</p>
+      {!report.evaluated && evalPending && !showPreliminaryReport && (
+        <div className="border-t border-border-soft pt-4">
+          <div className="rounded-2xl border border-accent/30 bg-accent/5 p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
+              <span className="text-[11px] font-mono text-accent tracking-[0.2em]">
+                AI Validators Deliberating
+              </span>
+            </div>
+            <p className="text-sm text-text-dim leading-relaxed">
+              Consensus typically takes up to 15 minutes. The result will appear here
+              automatically once they agree.
+              {elapsedMinutes > 0 && (
+                <span className="text-text-faint">
+                  {" "}
+                  ({elapsedMinutes} min from the request)
+                </span>
+              )}
+            </p>
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Confidence pill ────────────────────────────────────────────────────────
+
+const CONFIDENCE_PILL: Record<"high" | "medium" | "low", string> = {
+  high: "text-accent border-accent/40 bg-accent/10",
+  medium: "text-warning border-warning/40 bg-warning/10",
+  low: "text-danger border-danger/40 bg-danger/10",
+};
+
+function ConfidencePill({ value }: { value: "high" | "medium" | "low" }) {
+  return (
+    <div className="flex items-center gap-3 pt-2">
+      <span className="text-[10px] font-mono tracking-[0.25em] text-text-faint">
+        CONFIDENCE
+      </span>
+      <span
+        className={`text-[10px] font-mono tracking-[0.25em] px-2.5 py-1 rounded-full border uppercase ${CONFIDENCE_PILL[value]}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

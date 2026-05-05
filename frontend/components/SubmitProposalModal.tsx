@@ -5,6 +5,7 @@ import { X, ExternalLink } from "lucide-react";
 import { useSubmitProposal } from "@/lib/hooks/useTreasuryPilot";
 import { useWallet } from "@/lib/genlayer/wallet";
 import type { Program } from "@/lib/contracts/types";
+import { PaymentNote } from "./PaymentNote";
 
 interface SubmitProposalModalProps {
   orgId: number;
@@ -27,7 +28,7 @@ export function SubmitProposalModal({ orgId, programs, onClose, onSuccess }: Sub
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await mutateAsync({
+      const result = await mutateAsync({
         orgId,
         title: form.title,
         description: form.description,
@@ -35,8 +36,9 @@ export function SubmitProposalModal({ orgId, programs, onClose, onSuccess }: Sub
         recipient: form.recipient || address || "",
         targetProgram: form.targetProgram,
         rationale: form.rationale,
-        onSubmitted: (hash) => setTxHash(hash),
       });
+      const hash = result?.data?.genlayerTxHash;
+      if (typeof hash === "string") setTxHash(hash);
       onSuccess?.();
       onClose();
     } catch {}
@@ -135,13 +137,15 @@ export function SubmitProposalModal({ orgId, programs, onClose, onSuccess }: Sub
             />
           </div>
 
+          <PaymentNote routeId="submit-proposal" />
+
           {txHash && (
             <div className="rounded border border-accent/20 bg-accent/8 p-4 space-y-2">
               <div className="flex items-center gap-2">
                 <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
                 <span className="text-xs font-mono text-accent">AI Validators Deliberating</span>
               </div>
-              <p className="text-xs text-text-dim">Consensus takes 5–15 minutes. You can close this modal — your proposal will appear once validators agree.</p>
+              <p className="text-xs text-text-dim">You can close this modal — your proposal will appear once validators agree.</p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-text-faint font-mono">Tx:</span>
                 <span className="text-xs font-mono text-text-dim truncate">{txHash}</span>
