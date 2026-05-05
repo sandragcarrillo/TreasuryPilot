@@ -280,6 +280,152 @@ export function useSetModificationWindow() {
   });
 }
 
+export function useSetAppeals() {
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      orgId,
+      enabled,
+      windowHours,
+    }: {
+      orgId: number;
+      enabled: boolean;
+      windowHours: number;
+    }) => {
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "set-appeals",
+        address: actor,
+        data: { orgId, enabled, windowHours },
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["org", variables.orgId] });
+      success("Appeals settings updated");
+    },
+    onError: (err: any) => {
+      error("Failed to update appeals", {
+        description: err?.message || "Please try again.",
+      });
+    },
+  });
+}
+
+export function useFileAppeal() {
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: {
+      proposalId: number;
+      appealText: string;
+      title: string;
+      description: string;
+      requestedAmountUsd: string;
+      recipient: string;
+      targetProgram: string;
+      rationale: string;
+    }) => {
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "file-appeal",
+        address: actor,
+        data: args,
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["proposal", variables.proposalId] });
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["allProposals"] });
+      success("Appeal filed", {
+        description: "The org owner will review your appeal.",
+      });
+    },
+    onError: (err: any) => {
+      error("Failed to file appeal", {
+        description: err?.message || "Please try again.",
+      });
+    },
+  });
+}
+
+export function useSetHumanDecision() {
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      proposalId,
+      verdict,
+      reason,
+    }: {
+      proposalId: number;
+      verdict: "" | "approved" | "rejected" | "modify";
+      reason: string;
+    }) => {
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "set-human-decision",
+        address: actor,
+        data: { proposalId, verdict, reason },
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["proposal", variables.proposalId] });
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["allProposals"] });
+      success(variables.verdict ? "Human decision recorded" : "Human decision cleared");
+    },
+    onError: (err: any) => {
+      error("Failed to set human decision", {
+        description: err?.message || "Please try again.",
+      });
+    },
+  });
+}
+
+export function useSetReportHumanDecision() {
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      proposalId,
+      reportNumber,
+      action,
+      reason,
+    }: {
+      proposalId: number;
+      reportNumber: number;
+      action:
+        | ""
+        | "continue_funding"
+        | "pause_pending_clarification"
+        | "claw_back"
+        | "terminate";
+      reason: string;
+    }) => {
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "set-report-human-decision",
+        address: actor,
+        data: { proposalId, reportNumber, action, reason },
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["reports", variables.proposalId] });
+      success(variables.action ? "Human decision recorded" : "Human decision cleared");
+    },
+    onError: (err: any) => {
+      error("Failed to set human decision", {
+        description: err?.message || "Please try again.",
+      });
+    },
+  });
+}
+
 export function useSetHistoricalBaseline() {
   const { address } = useWallet();
   const queryClient = useQueryClient();

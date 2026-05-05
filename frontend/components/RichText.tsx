@@ -6,7 +6,26 @@ type Block =
   | { kind: "heading"; text: string }
   | { kind: "subheading"; text: string }
   | { kind: "paragraph"; text: string }
-  | { kind: "list"; items: string[] };
+  | { kind: "list"; items: string[] }
+  | { kind: "table"; headers: string[]; rows: string[][] };
+
+function isTableRow(line: string): boolean {
+  if (!/^\s*\|.*\|\s*$/.test(line)) return false;
+  return line.split("|").length >= 3;
+}
+
+function isSeparatorRow(line: string): boolean {
+  return /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(line);
+}
+
+function splitTableRow(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((c) => c.trim());
+}
 
 const URL_RE =
   /\bhttps?:\/\/[^\s<>"')]+|\b(?:www\.)?[a-z][a-z0-9\-]*(?:\.[a-z][a-z0-9\-]*)+\.[a-z]{2,}(?:[/:][^\s<>"')]*)?|\b[a-z][a-z0-9\-]+\.[a-z]{2,}\/[^\s<>"')]+/gi;
@@ -34,14 +53,14 @@ function trimTrailingPunct(s: string): { url: string; trail: string } {
 }
 
 /**
- * Render a string with embedded URLs as a mix of text and clickable <a> tags.
+ * Apply linkification to a single non-bold text segment.
  */
-function linkify(text: string): React.ReactNode[] {
+function linkifyPlain(text: string, keyOffset: number): React.ReactNode[] {
   const out: React.ReactNode[] = [];
   let last = 0;
   const re = new RegExp(URL_RE.source, URL_RE.flags);
   let m: RegExpExecArray | null;
-  let key = 0;
+  let key = keyOffset;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const { url, trail } = trimTrailingPunct(m[0]);
@@ -63,6 +82,38 @@ function linkify(text: string): React.ReactNode[] {
     last = m.index + m[0].length;
   }
   if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+/**
+ * Render a string with both markdown **bold** and clickable URLs. Splits on
+ * **bold** segments first, then linkifies each non-bold span.
+ */
+function linkify(text: string): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  const re = /\*\*([^*\n]+)\*\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) {
+      const segment = text.slice(last, m.index);
+      const linked = linkifyPlain(segment, key);
+      key += linked.length;
+      out.push(...linked);
+    }
+    out.push(
+      <strong key={key++} className="text-text font-medium">
+        {m[1]}
+      </strong>
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) {
+    const segment = text.slice(last);
+    const linked = linkifyPlain(segment, key);
+    out.push(...linked);
+  }
   return out.length > 0 ? out : [text];
 }
 
@@ -95,12 +146,69 @@ export function parseRichText(raw: string): Block[] {
     listBuf = [];
   };
 
-  for (const r of lines) {
-    const line = r.trim();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
 
     if (!line) {
       flushParagraph();
       flushList();
+      continue;
+    }
+
+    // Markdown table — same detection rules as ConstitutionViewer.
+    if (isTableRow(line)) {
+      const next = (lines[i + 1] ?? "").trim();
+      const hasSeparator = isSeparatorRow(next);
+      const headerlessButLooksLikeTable = !hasSeparator && isTableRow(next);
+      if (hasSeparator || headerlessButLooksLikeTable) {
+        flushParagraph();
+        flushList();
+        const headers = splitTableRow(line);
+        let cursor = hasSeparator ? i + 2 : i + 1;
+        const rows: string[][] = [];
+        while (cursor < lines.length) {
+          const candidate = lines[cursor].trim();
+          if (!candidate || !isTableRow(candidate)) break;
+          rows.push(splitTableRow(candidate));
+          cursor++;
+        }
+        blocks.push({ kind: "table", headers, rows });
+        i = cursor - 1;
+        continue;
+      }
+    }
+
+    // Markdown ATX heading: "# Title" / "## Section" / "### Subsection".
+    // ####+ → subheading, otherwise heading.
+    const atxMatch = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (atxMatch) {
+      flushParagraph();
+      flushList();
+      const level = atxMatch[1].length;
+      const text = atxMatch[2].replace(/\*\*/g, "").trim();
+      blocks.push({ kind: level >= 4 ? "subheading" : "heading", text });
+      continue;
+    }
+
+    // Bold-wrapped line on its own: "**Section Title**" → heading
+    // (or subheading if it looks like a sub-numbered "1.1" item).
+    const boldHeadingMatch = line.match(/^\*\*(.+?)\*\*\s*$/);
+    if (boldHeadingMatch) {
+      flushParagraph();
+      flushList();
+      const inner = boldHeadingMatch[1].trim();
+      const isSubheading = /^\d+\.\d+/.test(inner);
+      blocks.push({ kind: isSubheading ? "subheading" : "heading", text: inner });
+      continue;
+    }
+
+    // Bold inline label with body: "**Focus:** lorem ipsum…"
+    const boldInlineMatch = line.match(/^\*\*([^*\n]+?):\*\*\s+(.+)$/);
+    if (boldInlineMatch) {
+      flushParagraph();
+      flushList();
+      blocks.push({ kind: "subheading", text: boldInlineMatch[1].trim() });
+      buf.push(boldInlineMatch[2]);
       continue;
     }
 
@@ -259,6 +367,43 @@ export function RichText({ text, compact = false }: RichTextProps) {
                 </li>
               ))}
             </ul>
+          );
+        }
+        if (block.kind === "table") {
+          return (
+            <div key={i} className="overflow-x-auto -mx-1 md:mx-0">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-border-soft">
+                    {block.headers.map((h, j) => (
+                      <th
+                        key={j}
+                        className="text-left px-3 py-2 font-mono text-[10px] tracking-[0.2em] text-text-faint uppercase"
+                      >
+                        {linkify(h)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, ri) => (
+                    <tr
+                      key={ri}
+                      className="border-b border-border-soft/40 last:border-b-0"
+                    >
+                      {row.map((cell, ci) => (
+                        <td
+                          key={ci}
+                          className="px-3 py-2 align-top text-text-dim leading-relaxed"
+                        >
+                          {linkify(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           );
         }
         return (

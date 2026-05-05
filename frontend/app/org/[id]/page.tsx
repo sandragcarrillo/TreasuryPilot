@@ -9,6 +9,7 @@ import { ConstitutionViewer } from "@/components/ConstitutionViewer";
 import { ProposalDocket } from "@/components/ProposalDocket";
 import { SubmitProposalModal } from "@/components/SubmitProposalModal";
 import { EditConstitutionModal } from "@/components/EditConstitutionModal";
+import { AppealsPanel } from "@/components/AppealsPanel";
 import {
   useOrg,
   useOrgProposals,
@@ -116,6 +117,7 @@ export default function OrgPage() {
             <div className="space-y-4 animate-fade-in">
               {isOwner && <AutoApprovePanel orgId={orgId} org={org} />}
               {isOwner && <ModificationWindowPanel orgId={orgId} org={org} />}
+              {isOwner && <AppealsPanel orgId={orgId} org={org} />}
               {isOwner && <HistoricalBaselinePanel orgId={orgId} org={org} />}
               {isOwner && <AdminPanel orgId={orgId} admins={admins} />}
               {isOwner && <TransferOwnershipPanel orgId={orgId} currentOwner={org.owner} />}

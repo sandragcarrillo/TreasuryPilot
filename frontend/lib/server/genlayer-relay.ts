@@ -110,6 +110,60 @@ export const genlayerRelay = {
   setModificationWindow: (actor: `0x${string}`, orgId: number, hours: number) =>
     write("set_modification_window", [actor, orgId, hours]),
 
+  setAppeals: (
+    actor: `0x${string}`,
+    orgId: number,
+    enabled: boolean,
+    windowHours: number
+  ) => write("set_appeals", [actor, orgId, enabled, windowHours]),
+
+  fileAppeal: (
+    actor: `0x${string}`,
+    args: {
+      proposalId: number;
+      appealText: string;
+      title: string;
+      description: string;
+      requestedAmountUsd: string;
+      recipient: string;
+      targetProgram: string;
+      rationale: string;
+    }
+  ) =>
+    write("file_appeal", [
+      actor,
+      args.proposalId,
+      args.appealText,
+      args.title,
+      args.description,
+      args.requestedAmountUsd,
+      args.recipient,
+      args.targetProgram,
+      args.rationale,
+    ]),
+
+  setHumanDecision: (
+    actor: `0x${string}`,
+    proposalId: number,
+    verdict: string,
+    reason: string
+  ) => write("set_human_decision", [actor, proposalId, verdict, reason]),
+
+  setReportHumanDecision: (
+    actor: `0x${string}`,
+    proposalId: number,
+    reportNumber: number,
+    action: string,
+    reason: string
+  ) =>
+    write("set_report_human_decision", [
+      actor,
+      proposalId,
+      reportNumber,
+      action,
+      reason,
+    ]),
+
   // ─── Admin ────────────────────────────────────────────────────────────────
 
   addAdmin: (actor: `0x${string}`, orgId: number, adminAddress: `0x${string}`) =>

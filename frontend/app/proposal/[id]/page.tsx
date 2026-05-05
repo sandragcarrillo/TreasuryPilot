@@ -9,6 +9,13 @@ import { EvaluationOverlay } from "@/components/EvaluationOverlay";
 import { RichText, normalizeReasoning, splitConfidence } from "@/components/RichText";
 import { UpdateProposalModal } from "@/components/UpdateProposalModal";
 import { TeamMembersPanel } from "@/components/TeamMembersPanel";
+import { AppealModal } from "@/components/AppealModal";
+import {
+  ProposalHumanDecisionPanel,
+  ReportHumanDecisionPanel,
+  HumanVerdictPill,
+  HumanActionPill,
+} from "@/components/HumanDecisionPanel";
 import {
   PreliminaryProposalCard,
   PreliminaryReportCard,
@@ -165,6 +172,7 @@ export default function ProposalPage() {
 
   const [showReportForm, setShowReportForm] = useState(false);
   const [showRevise, setShowRevise] = useState(false);
+  const [showAppeal, setShowAppeal] = useState(false);
   // Tick every 30s so the deadline countdown stays current.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -201,6 +209,11 @@ export default function ProposalPage() {
     proposal?.status === "needs_modification" &&
     (isNaN(modificationDeadline) || modificationDeadline > Date.now());
   const canRevise = isSubmitter && modificationWindowOpen;
+  const canAppeal =
+    isSubmitter &&
+    proposal?.status === "rejected" &&
+    !!org?.appeals_enabled;
+  const canSetHumanDecision = !!(isOwner || isAdmin);
 
   const handleEvaluate = async (retryOfTxHash?: string) => {
     try {
@@ -288,11 +301,19 @@ export default function ProposalPage() {
                   </>
                 )}
               </div>
-              <span
-                className={`text-[11px] font-mono border rounded-full px-3 py-1 ${statusPill.cls}`}
-              >
-                {statusPill.label}
-              </span>
+              <div className="flex flex-wrap items-center gap-2 justify-end">
+                <span
+                  className={`text-[11px] font-mono border rounded-full px-3 py-1 ${statusPill.cls}`}
+                >
+                  {statusPill.label}
+                </span>
+                {proposal.appealed && (
+                  <span className="text-[11px] font-mono border border-warning/40 bg-warning/10 text-warning rounded-full px-3 py-1">
+                    Appealed
+                  </span>
+                )}
+                <HumanVerdictPill verdict={proposal.human_verdict} />
+              </div>
             </div>
 
             {/* Title */}
@@ -399,7 +420,7 @@ export default function ProposalPage() {
             )}
 
             {/* Footer actions */}
-            {(canVeto || canRevise || (!proposal.evaluated && !evaluationPending && isConnected)) && (
+            {(canVeto || canRevise || canAppeal || (!proposal.evaluated && !evaluationPending && isConnected)) && (
               <div className="border-t border-border-soft pt-5 flex flex-wrap items-center gap-3">
                 {!proposal.evaluated && !evaluationPending && isConnected && (
                   <>
@@ -420,6 +441,15 @@ export default function ProposalPage() {
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     Revise proposal
+                  </button>
+                )}
+                {canAppeal && (
+                  <button
+                    onClick={() => setShowAppeal(true)}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-mono tracking-[0.2em] text-warning border border-warning/50 hover:bg-warning/10 hover:border-warning/70 transition-all"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    {proposal.appealed ? "Update appeal" : "File appeal"}
                   </button>
                 )}
                 {canVeto && (
@@ -495,6 +525,67 @@ export default function ProposalPage() {
             </div>
           </div>
 
+          {/* Appeal text — public when filed */}
+          {proposal.appealed && proposal.appeal_text && (
+            <div className="gov-card p-6 md:p-8 space-y-3 border-warning/30 bg-warning/5">
+              <div className="flex items-center gap-2 text-[10px] font-mono tracking-[0.25em] text-warning uppercase">
+                <Pencil className="w-3 h-3" />
+                Submitter's appeal
+                {proposal.appeal_filed_at && (
+                  <span className="text-text-faint normal-case tracking-normal ml-2">
+                    Filed {new Date(proposal.appeal_filed_at).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              <RichText text={proposal.appeal_text} compact />
+            </div>
+          )}
+
+          {/* Human decision — visible to all when set; owners/admins can edit */}
+          {(canSetHumanDecision || proposal.human_verdict) && (
+            canSetHumanDecision ? (
+              <ProposalHumanDecisionPanel
+                proposalId={proposalId}
+                current={{
+                  verdict: proposal.human_verdict,
+                  reason: proposal.human_reason || "",
+                  decided_at: proposal.human_decided_at || "",
+                  decided_by: proposal.human_decided_by || "",
+                }}
+              />
+            ) : (
+              <div className="gov-card p-6 md:p-8 space-y-3">
+                <div className="flex items-center gap-2 text-[10px] font-mono tracking-[0.25em] text-accent uppercase">
+                  Human Decision
+                </div>
+                <div className="text-base text-text">
+                  <HumanVerdictPill verdict={proposal.human_verdict} />
+                </div>
+                {proposal.human_reason && (
+                  <p className="text-sm text-text-dim leading-relaxed">
+                    {proposal.human_reason}
+                  </p>
+                )}
+                {proposal.human_decided_by && (
+                  <div className="flex items-center gap-2 text-[11px] font-mono text-text-faint pt-1">
+                    <span>By</span>
+                    <AddressDisplay
+                      address={proposal.human_decided_by}
+                      className="text-text-dim"
+                      showCopy
+                    />
+                    {proposal.human_decided_at && (
+                      <>
+                        <span className="text-text-faint/40">·</span>
+                        <span>{new Date(proposal.human_decided_at).toLocaleString()}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          )}
+
           {/* Progress Reports */}
           {showReportSection && (
             <section className="space-y-6 pt-4">
@@ -545,6 +636,7 @@ export default function ProposalPage() {
                       report={report}
                       proposalId={proposalId}
                       onEvaluated={refetchReports}
+                      canSetHumanDecision={canSetHumanDecision}
                     />
                   ))}
                 </div>
@@ -560,6 +652,15 @@ export default function ProposalPage() {
           programs={programs}
           defaultWindowHours={org?.modification_window_hours ?? 48}
           onClose={() => setShowRevise(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
+
+      {showAppeal && proposal && (
+        <AppealModal
+          proposal={proposal}
+          programs={programs}
+          onClose={() => setShowAppeal(false)}
           onSuccess={() => refetch()}
         />
       )}
@@ -819,10 +920,12 @@ function ReportCard({
   report,
   proposalId,
   onEvaluated,
+  canSetHumanDecision,
 }: {
   report: any;
   proposalId: number;
   onEvaluated: () => void;
+  canSetHumanDecision: boolean;
 }) {
   const { mutateAsync: evalReport, isPending } = useEvaluateReport();
   const { isConnected } = useWallet();
@@ -885,6 +988,7 @@ function ReportCard({
               {actionPill.label}
             </span>
           )}
+          <HumanActionPill action={report.human_action || ""} />
           {report.evaluated && (
             <span className="font-mono text-[11px] text-text-faint">
               Progress <span className="text-text">{report.progress_score}/10</span>
@@ -960,6 +1064,31 @@ function ReportCard({
               })()}
             </div>
           )}
+
+          {(canSetHumanDecision || report.human_action) &&
+            (canSetHumanDecision ? (
+              <ReportHumanDecisionPanel
+                proposalId={proposalId}
+                reportNumber={report.report_number}
+                current={{
+                  action: report.human_action || "",
+                  reason: report.human_reason || "",
+                  decided_at: report.human_decided_at || "",
+                  decided_by: report.human_decided_by || "",
+                }}
+              />
+            ) : (
+              report.human_reason && (
+                <div className="border-t border-border-soft pt-4 space-y-2">
+                  <span className="font-mono text-accent tracking-[0.25em] text-[10px] uppercase">
+                    Human Decision Reason
+                  </span>
+                  <p className="text-sm text-text-dim leading-relaxed">
+                    {report.human_reason}
+                  </p>
+                </div>
+              )
+            ))}
         </>
       )}
 

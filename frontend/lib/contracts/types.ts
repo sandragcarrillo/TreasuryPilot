@@ -9,7 +9,17 @@ export interface Organization {
   veto_window_hours: number;
   use_historical_baseline: boolean;
   modification_window_hours: number;
+  appeals_enabled: boolean;
+  appeal_window_hours: number;
 }
+
+export type HumanVerdict = "" | "approved" | "rejected" | "modify";
+export type HumanReportAction =
+  | ""
+  | "continue_funding"
+  | "pause_pending_clarification"
+  | "claw_back"
+  | "terminate";
 
 export interface Proposal {
   id: number;
@@ -35,6 +45,14 @@ export interface Proposal {
     | "auto_approved"
     | "vetoed";
   modification_deadline: string;
+  appealed: boolean;
+  appeal_text: string;
+  appeal_filed_at: string;
+  appeal_deadline: string;
+  human_verdict: HumanVerdict;
+  human_reason: string;
+  human_decided_at: string;
+  human_decided_by: string;
 }
 
 export type RecommendedAction =
@@ -56,6 +74,10 @@ export interface Report {
   ai_summary: string;
   evaluated: boolean;
   recommended_action: RecommendedAction;
+  human_action: HumanReportAction;
+  human_reason: string;
+  human_decided_at: string;
+  human_decided_by: string;
 }
 
 export interface Program {

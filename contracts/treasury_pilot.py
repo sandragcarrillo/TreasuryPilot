@@ -27,6 +27,12 @@ class Organization:
     # How long submitters have to revise a proposal that came back as
     # "needs_modification". Default 48h.
     modification_window_hours: u32
+    # Appeals: whether submitters of REJECTED proposals can file an appeal
+    # for human review. Off by default. The window is advisory — the contract
+    # records the deadline so the UI can display it, but file_appeal accepts
+    # appeals after the deadline (the org owner can decline manually).
+    appeals_enabled: bool
+    appeal_window_hours: u32
 
 
 @allow_storage
@@ -53,6 +59,19 @@ class Proposal:
     # ISO datetime by which a "needs_modification" proposal must be revised.
     # Empty string when not in a modification window.
     modification_deadline: str
+    # Appeal layer (only set when the proposal was REJECTED and the submitter
+    # filed an appeal). status stays "rejected"; the appeal is an additional
+    # layer on top.
+    appealed: bool
+    appeal_text: str
+    appeal_filed_at: str         # ISO datetime
+    appeal_deadline: str         # ISO datetime, advisory
+    # Human-decision layer (org's final word, applied on top of the AI verdict).
+    # Empty strings when no human decision has been recorded.
+    human_verdict: str           # "" | "approved" | "rejected" | "modify"
+    human_reason: str
+    human_decided_at: str        # ISO datetime
+    human_decided_by: str        # 0x address as string
 
 
 @allow_storage
@@ -71,6 +90,12 @@ class Report:
     evaluated: bool
     # Action recommended by the AI auditor
     recommended_action: str               # "continue_funding" | "pause_pending_clarification" | "claw_back" | "terminate"
+    # Human-decision layer (org's final word on the report, applied on top
+    # of the AI assessment). Empty strings when no human decision recorded.
+    human_action: str                     # "" | one of the recommended_action values
+    human_reason: str
+    human_decided_at: str                 # ISO datetime
+    human_decided_by: str                 # 0x address as string
 
 
 # ─── Contract ─────────────────────────────────────────────────────────────────
@@ -293,6 +318,8 @@ class TreasuryPilot(gl.Contract):
             veto_window_hours=u32(24),
             use_historical_baseline=False,
             modification_window_hours=u32(48),
+            appeals_enabled=False,
+            appeal_window_hours=u32(168),
         )
         self.org_count = u32(oid + 1)
 
@@ -335,6 +362,153 @@ class TreasuryPilot(gl.Contract):
         if int(hours) < 1 or int(hours) > 720:
             raise gl.vm.UserError("Modification window must be between 1 and 720 hours")
         self.orgs[org_id].modification_window_hours = hours
+
+    @gl.public.write
+    def set_appeals(
+        self,
+        actor_address: Address,
+        org_id: u32,
+        enabled: bool,
+        window_hours: u32,
+    ):
+        """
+        Enable/disable appeals for the org and configure the advisory window
+        (in hours) submitters have to file an appeal on a rejected proposal.
+        Owner only. Default off; default window 168h (7 days). Capped at
+        8760h (1 year). The window is advisory: file_appeal accepts late
+        appeals and the org owner can decline manually.
+        """
+        actor = self._resolve_actor(actor_address)
+        self._require_owner(org_id, actor)
+        if int(window_hours) < 1 or int(window_hours) > 8760:
+            raise gl.vm.UserError("Appeal window must be between 1 and 8760 hours")
+        self.orgs[org_id].appeals_enabled = enabled
+        self.orgs[org_id].appeal_window_hours = window_hours
+
+    @gl.public.write
+    def file_appeal(
+        self,
+        actor_address: Address,
+        proposal_id: u32,
+        appeal_text: str,
+        title: str,
+        description: str,
+        requested_amount_usd: str,
+        recipient: str,
+        target_program: str,
+        rationale: str,
+    ):
+        """
+        File an appeal on a rejected proposal. Submitter only. Replaces the
+        proposal content with the supplied (presumably-revised) values and
+        records the submitter's appeal justification. The AI does NOT
+        re-evaluate; the org owner reviews via set_human_decision.
+
+        Status stays "rejected" — the appeal is an additional layer on top
+        of the AI verdict, not a status transition. Re-filing is allowed
+        (latest content wins).
+        """
+        actor = self._resolve_actor(actor_address)
+        proposal = self.proposals[proposal_id]
+        if actor != proposal.submitter:
+            raise gl.vm.UserError("Only the proposal submitter can file an appeal")
+        if proposal.status != "rejected":
+            raise gl.vm.UserError("Can only appeal rejected proposals")
+        org = self.orgs[proposal.org_id]
+        if not org.appeals_enabled:
+            raise gl.vm.UserError("Appeals are not enabled for this organization")
+
+        self.proposals[proposal_id].title = title
+        self.proposals[proposal_id].description = description
+        self.proposals[proposal_id].requested_amount_usd = requested_amount_usd
+        self.proposals[proposal_id].recipient = recipient
+        self.proposals[proposal_id].target_program = target_program
+        self.proposals[proposal_id].rationale = rationale
+        self.proposals[proposal_id].appealed = True
+        self.proposals[proposal_id].appeal_text = appeal_text
+        self.proposals[proposal_id].appeal_filed_at = str(gl.message.datetime).strip()
+        # Filing an appeal clears any prior human decision so the org owner
+        # reviews fresh content.
+        self.proposals[proposal_id].human_verdict = ""
+        self.proposals[proposal_id].human_reason = ""
+        self.proposals[proposal_id].human_decided_at = ""
+        self.proposals[proposal_id].human_decided_by = ""
+
+    @gl.public.write
+    def set_human_decision(
+        self,
+        actor_address: Address,
+        proposal_id: u32,
+        verdict: str,
+        reason: str,
+    ):
+        """
+        Set (or clear) the org's final human verdict on a proposal. Admin or
+        owner. Verdict ∈ {"", "approved", "rejected", "modify"}; empty
+        string clears the decision. The human verdict layers on top of —
+        rather than replacing — the AI recommendation. Both stay visible.
+        """
+        actor = self._resolve_actor(actor_address)
+        proposal = self.proposals[proposal_id]
+        self._require_admin_or_owner(proposal.org_id, actor)
+        if verdict not in ("", "approved", "rejected", "modify"):
+            raise gl.vm.UserError(
+                "Invalid verdict — must be 'approved', 'rejected', 'modify', or empty to clear"
+            )
+        if verdict == "":
+            self.proposals[proposal_id].human_verdict = ""
+            self.proposals[proposal_id].human_reason = ""
+            self.proposals[proposal_id].human_decided_at = ""
+            self.proposals[proposal_id].human_decided_by = ""
+        else:
+            self.proposals[proposal_id].human_verdict = verdict
+            self.proposals[proposal_id].human_reason = reason
+            self.proposals[proposal_id].human_decided_at = str(gl.message.datetime).strip()
+            self.proposals[proposal_id].human_decided_by = str(actor)
+
+    @gl.public.write
+    def set_report_human_decision(
+        self,
+        actor_address: Address,
+        proposal_id: u32,
+        report_number: u32,
+        action: str,
+        reason: str,
+    ):
+        """
+        Set (or clear) the org's final human action on a progress report.
+        Admin or owner. Action mirrors the AI's recommended_action enum:
+        "" | "continue_funding" | "pause_pending_clarification" |
+        "claw_back" | "terminate". Empty string clears the decision. The
+        human action layers on top of the AI assessment; both stay visible.
+        """
+        actor = self._resolve_actor(actor_address)
+        report_key = f"{int(proposal_id)}:{int(report_number)}"
+        report = self.reports[report_key]
+        proposal = self.proposals[report.proposal_id]
+        self._require_admin_or_owner(proposal.org_id, actor)
+        valid_actions = (
+            "",
+            "continue_funding",
+            "pause_pending_clarification",
+            "claw_back",
+            "terminate",
+        )
+        if action not in valid_actions:
+            raise gl.vm.UserError(
+                "Invalid action — must be one of: continue_funding, "
+                "pause_pending_clarification, claw_back, terminate (or empty to clear)"
+            )
+        if action == "":
+            self.reports[report_key].human_action = ""
+            self.reports[report_key].human_reason = ""
+            self.reports[report_key].human_decided_at = ""
+            self.reports[report_key].human_decided_by = ""
+        else:
+            self.reports[report_key].human_action = action
+            self.reports[report_key].human_reason = reason
+            self.reports[report_key].human_decided_at = str(gl.message.datetime).strip()
+            self.reports[report_key].human_decided_by = str(actor)
 
     # ─── Admin Management ─────────────────────────────────────────────────────
 
@@ -412,6 +586,14 @@ class TreasuryPilot(gl.Contract):
             evaluated=False,
             status="pending",
             modification_deadline="",
+            appealed=False,
+            appeal_text="",
+            appeal_filed_at="",
+            appeal_deadline="",
+            human_verdict="",
+            human_reason="",
+            human_decided_at="",
+            human_decided_by="",
         )
         self.proposal_count = u32(pid + 1)
         self.orgs[org_id].proposal_count = u32(org.proposal_count + 1)
@@ -476,6 +658,16 @@ class TreasuryPilot(gl.Contract):
         self.proposals[proposal_id].evaluated = False
         self.proposals[proposal_id].status = "pending"
         self.proposals[proposal_id].modification_deadline = ""
+        # Content changed — wipe any prior appeal/human-decision layers so
+        # they can't dangle on top of unrelated content.
+        self.proposals[proposal_id].appealed = False
+        self.proposals[proposal_id].appeal_text = ""
+        self.proposals[proposal_id].appeal_filed_at = ""
+        self.proposals[proposal_id].appeal_deadline = ""
+        self.proposals[proposal_id].human_verdict = ""
+        self.proposals[proposal_id].human_reason = ""
+        self.proposals[proposal_id].human_decided_at = ""
+        self.proposals[proposal_id].human_decided_by = ""
 
         # Track the new program name if it changed.
         org_id = proposal.org_id
@@ -925,6 +1117,18 @@ Notes on the JSON:
         else:
             self.proposals[proposal_id].modification_deadline = ""
 
+        # If the AI rejected and appeals are enabled, record the advisory
+        # appeal deadline so the UI can show "X days remaining" guidance.
+        if status == "rejected" and org.appeals_enabled:
+            window_hours = int(org.appeal_window_hours) or 168
+            try:
+                deadline = self._message_now() + timedelta(hours=window_hours)
+                self.proposals[proposal_id].appeal_deadline = deadline.isoformat()
+            except Exception:
+                self.proposals[proposal_id].appeal_deadline = ""
+        else:
+            self.proposals[proposal_id].appeal_deadline = ""
+
     @gl.public.write
     def veto_proposal(self, actor_address: Address, proposal_id: u32):
         """Veto an auto-approved proposal. Admin or owner only."""
@@ -979,6 +1183,10 @@ Notes on the JSON:
             ai_summary="",
             evaluated=False,
             recommended_action="",
+            human_action="",
+            human_reason="",
+            human_decided_at="",
+            human_decided_by="",
         )
         self.report_counts[proposal_id] = u32(int(report_num) + 1)
 
@@ -1288,6 +1496,8 @@ Notes on the JSON:
             "veto_window_hours": int(o.veto_window_hours),
             "use_historical_baseline": bool(o.use_historical_baseline),
             "modification_window_hours": int(o.modification_window_hours),
+            "appeals_enabled": bool(o.appeals_enabled),
+            "appeal_window_hours": int(o.appeal_window_hours),
         })
 
     @gl.public.view
@@ -1319,6 +1529,14 @@ Notes on the JSON:
             "evaluated": bool(p.evaluated),
             "status": str(p.status),
             "modification_deadline": str(p.modification_deadline),
+            "appealed": bool(p.appealed),
+            "appeal_text": str(p.appeal_text),
+            "appeal_filed_at": str(p.appeal_filed_at),
+            "appeal_deadline": str(p.appeal_deadline),
+            "human_verdict": str(p.human_verdict),
+            "human_reason": str(p.human_reason),
+            "human_decided_at": str(p.human_decided_at),
+            "human_decided_by": str(p.human_decided_by),
         })
 
     @gl.public.view
@@ -1345,6 +1563,10 @@ Notes on the JSON:
             "ai_summary": str(r.ai_summary),
             "evaluated": bool(r.evaluated),
             "recommended_action": str(r.recommended_action),
+            "human_action": str(r.human_action),
+            "human_reason": str(r.human_reason),
+            "human_decided_at": str(r.human_decided_at),
+            "human_decided_by": str(r.human_decided_by),
         })
 
     @gl.public.view
