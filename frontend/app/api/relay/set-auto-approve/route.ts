@@ -1,5 +1,11 @@
 import { handleRelay } from "@/lib/server/relay-handler";
 import { genlayerRelay } from "@/lib/server/genlayer-relay";
+import {
+  requireBool,
+  requireInt,
+  requireObject,
+  requireUsdAmount,
+} from "@/lib/server/validate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,20 +23,27 @@ export async function POST(req: Request) {
     action: "set-auto-approve",
     paid: false,
     validate: (data) => {
-      if (typeof data !== "object" || data === null) return { ok: false, message: "data required" };
-      const d = data as Record<string, unknown>;
-      if (typeof d.orgId !== "number") return { ok: false, message: "orgId (number) required" };
-      if (typeof d.enabled !== "boolean") return { ok: false, message: "enabled (boolean) required" };
-      if (typeof d.thresholdUsd !== "string") return { ok: false, message: "thresholdUsd (string) required" };
-      if (typeof d.vetoWindowHours !== "number")
-        return { ok: false, message: "vetoWindowHours (number) required" };
+      const obj = requireObject(data);
+      if (!obj.ok) return obj;
+      const orgId = requireInt(obj.value.orgId, "orgId", { min: 0, max: 4294967295 });
+      if (!orgId.ok) return orgId;
+      const enabled = requireBool(obj.value.enabled, "enabled");
+      if (!enabled.ok) return enabled;
+      const thresholdUsd = requireUsdAmount(obj.value.thresholdUsd, "thresholdUsd");
+      if (!thresholdUsd.ok) return thresholdUsd;
+      // Veto window: 0 (effectively disabled) to one year, in hours.
+      const vetoWindowHours = requireInt(obj.value.vetoWindowHours, "vetoWindowHours", {
+        min: 0,
+        max: 8760,
+      });
+      if (!vetoWindowHours.ok) return vetoWindowHours;
       return {
         ok: true,
         value: {
-          orgId: d.orgId,
-          enabled: d.enabled,
-          thresholdUsd: d.thresholdUsd,
-          vetoWindowHours: d.vetoWindowHours,
+          orgId: orgId.value,
+          enabled: enabled.value,
+          thresholdUsd: thresholdUsd.value,
+          vetoWindowHours: vetoWindowHours.value,
         },
       };
     },

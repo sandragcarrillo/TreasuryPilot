@@ -1,5 +1,5 @@
 /**
- * Chain registry — chains TreasuryPilot accepts payments on.
+ * Chain registry — chains Axiom accepts payments on.
  * Single source of truth for client + server.
  */
 
@@ -76,10 +76,13 @@ const ROOTSTOCK_TESTNET: ChainInfo = {
   rpcUrl: "https://public-node.testnet.rsk.co",
 };
 
+// Rootstock chains are defined above and ready to re-enable once the RSK flow
+// is fully tested. Keep them out of SUPPORTED_CHAINS for v1 — Base only.
+void ROOTSTOCK_MAINNET;
+void ROOTSTOCK_TESTNET;
+
 export const SUPPORTED_CHAINS: ChainInfo[] =
-  NETWORK_MODE === "mainnet"
-    ? [BASE_MAINNET, ROOTSTOCK_MAINNET]
-    : [BASE_SEPOLIA, ROOTSTOCK_TESTNET];
+  NETWORK_MODE === "mainnet" ? [BASE_MAINNET] : [BASE_SEPOLIA];
 
 export function getChain(id: number): ChainInfo | null {
   return SUPPORTED_CHAINS.find((c) => c.id === id) || null;

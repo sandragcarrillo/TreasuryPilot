@@ -3,6 +3,7 @@
 import { signAuth, type AuthEnvelope } from "./auth";
 import { buildBasePaymentHeader } from "./payment-base";
 import { buildRskPaymentHeader } from "./payment-rsk";
+import { waitForAcceptedTx } from "../genlayer/wait";
 
 interface PaymentChallenge {
   x402Version: number;
@@ -20,6 +21,11 @@ export interface RelayCallOptions {
   data: unknown;
   paid?: boolean;
   preferredChainId?: number;
+  // When true (default), block until the resulting GenLayer tx reaches
+  // ACCEPTED so a follow-up read returns fresh state. Set to false for
+  // long-running consensus calls (evaluate-proposal, evaluate-report) that
+  // have their own pending UI.
+  waitForAccepted?: boolean;
 }
 
 export interface RelayResult {
@@ -31,10 +37,15 @@ const PATH_BY_ACTION: Record<string, string> = {
   "create-org": "/api/relay/create-org",
   "update-constitution": "/api/relay/update-constitution",
   "set-auto-approve": "/api/relay/set-auto-approve",
+  "set-historical-baseline": "/api/relay/set-historical-baseline",
+  "set-modification-window": "/api/relay/set-modification-window",
   "add-admin": "/api/relay/add-admin",
   "remove-admin": "/api/relay/remove-admin",
   "transfer-ownership": "/api/relay/transfer-ownership",
   "submit-proposal": "/api/relay/submit-proposal",
+  "update-proposal": "/api/relay/update-proposal",
+  "add-team-member": "/api/relay/add-team-member",
+  "remove-team-member": "/api/relay/remove-team-member",
   "evaluate-proposal": "/api/relay/evaluate-proposal",
   "veto-proposal": "/api/relay/veto-proposal",
   "submit-report": "/api/relay/submit-report",
@@ -125,5 +136,15 @@ export async function relayCall(opts: RelayCallOptions): Promise<RelayResult> {
   }
 
   const data = (await res.json()) as Record<string, unknown>;
+
+  // Wait for the GenLayer tx to be ACCEPTED so the next contract read sees
+  // the new state. Skipped for long-running consensus calls (evaluators)
+  // which manage their own pending UI.
+  const shouldWait = opts.waitForAccepted !== false;
+  if (shouldWait) {
+    const txHash = typeof data.genlayerTxHash === "string" ? data.genlayerTxHash : undefined;
+    await waitForAcceptedTx(txHash);
+  }
+
   return { ok: true, data };
 }

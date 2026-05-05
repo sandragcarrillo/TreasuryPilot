@@ -41,7 +41,7 @@ export default function OrganizationsPage() {
               Organizations
             </h1>
             <p className="text-text-dim text-base mt-4 max-w-xl leading-relaxed">
-              Browse every organization running grants on Treasury Pilot.
+              Browse every organization running grants on Axiom.
             </p>
           </div>
         </div>

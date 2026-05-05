@@ -1,5 +1,6 @@
 import { handleRelay } from "@/lib/server/relay-handler";
 import { genlayerRelay } from "@/lib/server/genlayer-relay";
+import { requireInt, requireObject, requireString } from "@/lib/server/validate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,26 +19,26 @@ export async function POST(req: Request) {
     action: "submit-report",
     paid: { routeId: "submit-report" },
     validate: (data) => {
-      if (typeof data !== "object" || data === null) return { ok: false, message: "data required" };
-      const d = data as Record<string, unknown>;
-      if (typeof d.proposalId !== "number") return { ok: false, message: "proposalId (number) required" };
-      const stringFields: Array<keyof Data> = [
-        "milestonesCompleted",
-        "fundsSpentUsd",
-        "deliverables",
-        "evidenceUrls",
-      ];
-      for (const f of stringFields) {
-        if (typeof d[f] !== "string") return { ok: false, message: `${f} (string) required` };
-      }
+      const obj = requireObject(data);
+      if (!obj.ok) return obj;
+      const proposalId = requireInt(obj.value.proposalId, "proposalId", { min: 0, max: 4294967295 });
+      if (!proposalId.ok) return proposalId;
+      const milestonesCompleted = requireString(obj.value.milestonesCompleted, "milestonesCompleted", { max: 500 });
+      if (!milestonesCompleted.ok) return milestonesCompleted;
+      const fundsSpentUsd = requireString(obj.value.fundsSpentUsd, "fundsSpentUsd", { max: 500 });
+      if (!fundsSpentUsd.ok) return fundsSpentUsd;
+      const deliverables = requireString(obj.value.deliverables, "deliverables", { max: 8192 });
+      if (!deliverables.ok) return deliverables;
+      const evidenceUrls = requireString(obj.value.evidenceUrls, "evidenceUrls", { max: 4096 });
+      if (!evidenceUrls.ok) return evidenceUrls;
       return {
         ok: true,
         value: {
-          proposalId: d.proposalId,
-          milestonesCompleted: d.milestonesCompleted as string,
-          fundsSpentUsd: d.fundsSpentUsd as string,
-          deliverables: d.deliverables as string,
-          evidenceUrls: d.evidenceUrls as string,
+          proposalId: proposalId.value,
+          milestonesCompleted: milestonesCompleted.value,
+          fundsSpentUsd: fundsSpentUsd.value,
+          deliverables: deliverables.value,
+          evidenceUrls: evidenceUrls.value,
         },
       };
     },

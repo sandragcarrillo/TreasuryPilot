@@ -7,6 +7,8 @@ export interface Organization {
   auto_approve_enabled: boolean;
   auto_approve_threshold_usd: string;
   veto_window_hours: number;
+  use_historical_baseline: boolean;
+  modification_window_hours: number;
 }
 
 export interface Proposal {
@@ -32,7 +34,15 @@ export interface Proposal {
     | "needs_modification"
     | "auto_approved"
     | "vetoed";
+  modification_deadline: string;
 }
+
+export type RecommendedAction =
+  | "continue_funding"
+  | "pause_pending_clarification"
+  | "claw_back"
+  | "terminate"
+  | "";
 
 export interface Report {
   proposal_id: number;
@@ -42,9 +52,10 @@ export interface Report {
   deliverables: string;
   evidence_urls: string;
   progress_score: number;
-  roi_status: "on_track" | "at_risk" | "exceeding" | "failed" | "";
+  roi_status: "on_track" | "at_risk" | "exceeding" | "pivoted" | "failed" | "";
   ai_summary: string;
   evaluated: boolean;
+  recommended_action: RecommendedAction;
 }
 
 export interface Program {

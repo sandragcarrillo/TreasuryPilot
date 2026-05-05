@@ -57,7 +57,7 @@ export async function buildChallenge(args: {
   error?: string;
 }): Promise<PaymentChallenge> {
   const priceUsd = ROUTE_PRICE_USD[args.routeId];
-  const description = `TreasuryPilot ${args.routeId}`;
+  const description = `Axiom ${args.routeId}`;
 
   const baseReq: BasePaymentRequirement = {
     scheme: "exact",

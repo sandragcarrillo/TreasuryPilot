@@ -1,5 +1,6 @@
 import { handleRelay } from "@/lib/server/relay-handler";
 import { genlayerRelay } from "@/lib/server/genlayer-relay";
+import { requireInt, requireObject } from "@/lib/server/validate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,11 +15,11 @@ export async function POST(req: Request) {
     action: "veto-proposal",
     paid: false,
     validate: (data) => {
-      if (typeof data !== "object" || data === null) return { ok: false, message: "data required" };
-      const d = data as Record<string, unknown>;
-      if (typeof d.proposalId !== "number" || d.proposalId < 0)
-        return { ok: false, message: "proposalId (number) required" };
-      return { ok: true, value: { proposalId: d.proposalId } };
+      const obj = requireObject(data);
+      if (!obj.ok) return obj;
+      const proposalId = requireInt(obj.value.proposalId, "proposalId", { min: 0, max: 4294967295 });
+      if (!proposalId.ok) return proposalId;
+      return { ok: true, value: { proposalId: proposalId.value } };
     },
     execute: async ({ actor, data }) => {
       const tx = await genlayerRelay.vetoProposal(actor, data.proposalId);

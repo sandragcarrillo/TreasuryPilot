@@ -1,5 +1,6 @@
 import { handleRelay } from "@/lib/server/relay-handler";
 import { genlayerRelay } from "@/lib/server/genlayer-relay";
+import { requireObject, requireString } from "@/lib/server/validate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,12 +16,13 @@ export async function POST(req: Request) {
     action: "create-org",
     paid: { routeId: "create-org" },
     validate: (data) => {
-      if (typeof data !== "object" || data === null) return { ok: false, message: "data required" };
-      const d = data as Record<string, unknown>;
-      if (typeof d.name !== "string" || !d.name.trim()) return { ok: false, message: "name required" };
-      if (typeof d.constitution !== "string" || !d.constitution.trim())
-        return { ok: false, message: "constitution required" };
-      return { ok: true, value: { name: d.name, constitution: d.constitution } };
+      const obj = requireObject(data);
+      if (!obj.ok) return obj;
+      const name = requireString(obj.value.name, "name", { max: 200 });
+      if (!name.ok) return name;
+      const constitution = requireString(obj.value.constitution, "constitution", { max: 16384 });
+      if (!constitution.ok) return constitution;
+      return { ok: true, value: { name: name.value, constitution: constitution.value } };
     },
     execute: async ({ actor, data }) => {
       const tx = await genlayerRelay.createOrg(actor, data.name, data.constitution);

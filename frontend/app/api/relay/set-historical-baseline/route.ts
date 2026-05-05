@@ -1,31 +1,31 @@
 import { handleRelay } from "@/lib/server/relay-handler";
 import { genlayerRelay } from "@/lib/server/genlayer-relay";
-import { requireAddress, requireInt, requireObject } from "@/lib/server/validate";
+import { requireBool, requireInt, requireObject } from "@/lib/server/validate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface Data {
   orgId: number;
-  adminAddress: `0x${string}`;
+  enabled: boolean;
 }
 
 export async function POST(req: Request) {
   return handleRelay<Data, { genlayerTxHash: string }>({
     request: req,
-    action: "remove-admin",
+    action: "set-historical-baseline",
     paid: false,
     validate: (data) => {
       const obj = requireObject(data);
       if (!obj.ok) return obj;
       const orgId = requireInt(obj.value.orgId, "orgId", { min: 0, max: 4294967295 });
       if (!orgId.ok) return orgId;
-      const adminAddress = requireAddress(obj.value.adminAddress, "adminAddress");
-      if (!adminAddress.ok) return adminAddress;
-      return { ok: true, value: { orgId: orgId.value, adminAddress: adminAddress.value } };
+      const enabled = requireBool(obj.value.enabled, "enabled");
+      if (!enabled.ok) return enabled;
+      return { ok: true, value: { orgId: orgId.value, enabled: enabled.value } };
     },
     execute: async ({ actor, data }) => {
-      const tx = await genlayerRelay.removeAdmin(actor, data.orgId, data.adminAddress);
+      const tx = await genlayerRelay.setHistoricalBaseline(actor, data.orgId, data.enabled);
       return { genlayerTxHash: tx };
     },
   });

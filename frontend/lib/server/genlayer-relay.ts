@@ -47,6 +47,45 @@ async function write(functionName: string, args: unknown[]): Promise<string> {
   return txHash as string;
 }
 
+export interface UndeterminedCheck {
+  ok: boolean;
+  reason?: string;
+  // The decoded function args of the original tx (so we can compare
+  // proposalId / reportNumber / etc).
+  args?: unknown[];
+  functionName?: string;
+}
+
+/**
+ * Verify that `txHash` is an UNDETERMINED contract call to one of the
+ * specified function names on this contract. Used to validate free-retry
+ * requests server-side.
+ */
+export async function verifyUndeterminedTx(
+  txHash: string,
+  expectedFunctionNames: string[]
+): Promise<UndeterminedCheck> {
+  const { client } = getClient();
+  let tx: any;
+  try {
+    tx = await (client as any).getTransaction({ hash: txHash });
+  } catch (err) {
+    return { ok: false, reason: "Could not fetch original transaction" };
+  }
+  if (!tx) return { ok: false, reason: "Transaction not found" };
+  const status = String(tx.statusName || tx.status || "").toUpperCase();
+  if (status !== "UNDETERMINED") {
+    return { ok: false, reason: `Transaction is not UNDETERMINED (status: ${status})` };
+  }
+  const decoded = tx.txDataDecoded as any;
+  const fn = decoded?.functionName ?? decoded?.method ?? decoded?.name;
+  if (typeof fn !== "string" || !expectedFunctionNames.includes(fn)) {
+    return { ok: false, reason: `Original tx is not one of: ${expectedFunctionNames.join(", ")}` };
+  }
+  const argsRaw = decoded?.args ?? decoded?.params ?? [];
+  return { ok: true, args: Array.isArray(argsRaw) ? argsRaw : [], functionName: fn };
+}
+
 export const genlayerRelay = {
   // ─── Organization ──────────────────────────────────────────────────────────
 
@@ -64,6 +103,12 @@ export const genlayerRelay = {
     vetoWindowHours: number
   ) =>
     write("set_auto_approve", [actor, orgId, enabled, thresholdUsd, vetoWindowHours]),
+
+  setHistoricalBaseline: (actor: `0x${string}`, orgId: number, enabled: boolean) =>
+    write("set_historical_baseline", [actor, orgId, enabled]),
+
+  setModificationWindow: (actor: `0x${string}`, orgId: number, hours: number) =>
+    write("set_modification_window", [actor, orgId, hours]),
 
   // ─── Admin ────────────────────────────────────────────────────────────────
 
@@ -106,6 +151,35 @@ export const genlayerRelay = {
 
   vetoProposal: (actor: `0x${string}`, proposalId: number) =>
     write("veto_proposal", [actor, proposalId]),
+
+  updateProposal: (
+    actor: `0x${string}`,
+    args: {
+      proposalId: number;
+      title: string;
+      description: string;
+      requestedAmountUsd: string;
+      recipient: string;
+      targetProgram: string;
+      rationale: string;
+    }
+  ) =>
+    write("update_proposal", [
+      actor,
+      args.proposalId,
+      args.title,
+      args.description,
+      args.requestedAmountUsd,
+      args.recipient,
+      args.targetProgram,
+      args.rationale,
+    ]),
+
+  addTeamMember: (actor: `0x${string}`, proposalId: number, memberAddress: `0x${string}`) =>
+    write("add_team_member", [actor, proposalId, memberAddress]),
+
+  removeTeamMember: (actor: `0x${string}`, proposalId: number, memberAddress: `0x${string}`) =>
+    write("remove_team_member", [actor, proposalId, memberAddress]),
 
   // ─── Reports ──────────────────────────────────────────────────────────────
 

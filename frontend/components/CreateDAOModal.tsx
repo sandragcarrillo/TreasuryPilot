@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, ExternalLink, Check, Copy } from "lucide-react";
 import { useCreateOrg } from "@/lib/hooks/useTreasuryPilot";
 import { useWallet } from "@/lib/genlayer/wallet";
+import { PaymentNote } from "./PaymentNote";
 
 interface CreateOrgModalProps {
   onClose: () => void;
@@ -20,7 +21,7 @@ Program 1: [Program name]
 - Type: [one-off grant / recurring rewards / both]
 - Annual budget: $[X] USD
 - Typical grant size: $[X] – $[X] USD
-- Focus: [What this program funds. Be specific. Bad: "tooling". Good: "developer tooling that reduces friction for new builders shipping on Rootstock — SDKs, debuggers, deployment helpers, documentation generators."]
+- Focus: [What this program funds. Be specific. Bad: "tooling". Good: "developer tooling that reduces friction for new builders in our ecosystem — SDKs, debuggers, deployment helpers, documentation generators."]
 - Out of scope: [What this program explicitly does NOT fund, even if mission-aligned. Example: "marketing campaigns, conferences, general operational expenses, hiring."]
 
 Program 2: [Program name]
@@ -99,7 +100,7 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateOrgModalProps) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-border-soft">
           <div>
             <h2 className="font-display text-lg text-text">Register Organization</h2>
-            <p className="text-xs text-text-faint font-mono mt-0.5">Add your organization to the TreasuryPilot registry</p>
+            <p className="text-xs text-text-faint font-mono mt-0.5">Add your organization to the Axiom registry</p>
           </div>
           <button onClick={onClose} className="text-text-faint hover:text-text-dim transition-colors">
             <X className="w-5 h-5" />
@@ -153,8 +154,8 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateOrgModalProps) {
               Include your mission, grant programs with budgets, allocation rules, and alignment criteria.
             </p>
             <textarea
-              className="gov-input w-full px-4 py-3 text-sm font-mono resize-y min-h-80"
-              rows={20}
+              className="gov-input w-full px-4 py-3 text-sm font-mono resize-y min-h-40 max-h-72"
+              rows={8}
               placeholder={PLACEHOLDER_CONSTITUTION}
               value={constitution}
               onChange={(e) => setConstitution(e.target.value)}
@@ -162,13 +163,15 @@ export function CreateDAOModal({ onClose, onSuccess }: CreateOrgModalProps) {
             />
           </div>
 
+          <PaymentNote routeId="create-org" />
+
           {txHash && (
             <div className="rounded border border-accent/20 bg-accent/8 p-4 space-y-2">
               <div className="flex items-center gap-2">
                 <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
                 <span className="text-xs font-mono text-accent">AI Validators Deliberating</span>
               </div>
-              <p className="text-xs text-text-dim">Consensus takes 5–15 minutes. You can close this modal — your organization will appear once validators agree.</p>
+              <p className="text-xs text-text-dim">You can close this modal — your organization will appear once validators agree.</p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-text-faint font-mono">Tx:</span>
                 <span className="text-xs font-mono text-text-dim truncate">{txHash}</span>

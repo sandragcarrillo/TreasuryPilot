@@ -66,12 +66,14 @@ class TreasuryPilot {
     const results = await Promise.allSettled(
       Array.from({ length: count }, (_, i) => this.getOrg(i))
     );
-    return results
-      .filter(
-        (r): r is PromiseFulfilledResult<Organization> =>
-          r.status === "fulfilled"
-      )
-      .map((r) => r.value);
+    const successes = results.filter(
+      (r): r is PromiseFulfilledResult<Organization> =>
+        r.status === "fulfilled"
+    );
+    if (successes.length === 0) {
+      throw new Error("All org reads failed — RPC busy; will retry");
+    }
+    return successes.map((r) => r.value);
   }
 
   async getOrgAdmins(orgId: number): Promise<string[]> {
@@ -80,6 +82,19 @@ class TreasuryPilot {
         address: this.contractAddress,
         functionName: "get_org_admins",
         args: [orgId],
+      });
+      return JSON.parse(typeof raw === "string" ? raw : "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  async getProposalTeam(proposalId: number): Promise<string[]> {
+    try {
+      const raw: any = await this.client.readContract({
+        address: this.contractAddress,
+        functionName: "get_proposal_team",
+        args: [proposalId],
       });
       return JSON.parse(typeof raw === "string" ? raw : "[]");
     } catch {
@@ -117,13 +132,13 @@ class TreasuryPilot {
     const results = await Promise.allSettled(
       Array.from({ length: count }, (_, i) => this.getProposal(i))
     );
-    return results
-      .filter(
-        (r): r is PromiseFulfilledResult<Proposal> =>
-          r.status === "fulfilled"
-      )
-      .map((r) => r.value)
-      .filter((p) => p.org_id === orgId);
+    const successes = results.filter(
+      (r): r is PromiseFulfilledResult<Proposal> => r.status === "fulfilled"
+    );
+    if (successes.length === 0) {
+      throw new Error("All proposal reads failed — RPC busy; will retry");
+    }
+    return successes.map((r) => r.value).filter((p) => p.org_id === orgId);
   }
 
   async getAllProposals(): Promise<Proposal[]> {
@@ -132,12 +147,13 @@ class TreasuryPilot {
     const results = await Promise.allSettled(
       Array.from({ length: count }, (_, i) => this.getProposal(i))
     );
-    return results
-      .filter(
-        (r): r is PromiseFulfilledResult<Proposal> =>
-          r.status === "fulfilled"
-      )
-      .map((r) => r.value);
+    const successes = results.filter(
+      (r): r is PromiseFulfilledResult<Proposal> => r.status === "fulfilled"
+    );
+    if (successes.length === 0) {
+      throw new Error("All proposal reads failed — RPC busy; will retry");
+    }
+    return successes.map((r) => r.value);
   }
 
   // ─── Read: Reports ───────────────────────────────────────────────────────
@@ -172,11 +188,18 @@ class TreasuryPilot {
         this.getReport(proposalId, i)
       )
     );
-    return results
-      .filter(
-        (r): r is PromiseFulfilledResult<Report> => r.status === "fulfilled"
-      )
-      .map((r) => r.value);
+    const successes = results.filter(
+      (r): r is PromiseFulfilledResult<Report> => r.status === "fulfilled"
+    );
+    // If every read failed (transient RPC issue while a tx is mid-flight),
+    // throw so TanStack keeps the previous successful data instead of
+    // overwriting the UI with an empty list.
+    if (successes.length === 0) {
+      throw new Error(
+        "All report reads failed — RPC may be busy processing a tx; will retry"
+      );
+    }
+    return successes.map((r) => r.value);
   }
 
   // ─── Read: Budget ────────────────────────────────────────────────────────

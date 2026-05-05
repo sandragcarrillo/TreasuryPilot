@@ -1,5 +1,6 @@
 import { handleRelay } from "@/lib/server/relay-handler";
 import { genlayerRelay } from "@/lib/server/genlayer-relay";
+import { requireInt, requireObject, requireString } from "@/lib/server/validate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,12 +16,13 @@ export async function POST(req: Request) {
     action: "update-constitution",
     paid: false,
     validate: (data) => {
-      if (typeof data !== "object" || data === null) return { ok: false, message: "data required" };
-      const d = data as Record<string, unknown>;
-      if (typeof d.orgId !== "number") return { ok: false, message: "orgId (number) required" };
-      if (typeof d.newConstitution !== "string" || !d.newConstitution.trim())
-        return { ok: false, message: "newConstitution required" };
-      return { ok: true, value: { orgId: d.orgId, newConstitution: d.newConstitution } };
+      const obj = requireObject(data);
+      if (!obj.ok) return obj;
+      const orgId = requireInt(obj.value.orgId, "orgId", { min: 0, max: 4294967295 });
+      if (!orgId.ok) return orgId;
+      const constitution = requireString(obj.value.newConstitution, "newConstitution", { max: 16384 });
+      if (!constitution.ok) return constitution;
+      return { ok: true, value: { orgId: orgId.value, newConstitution: constitution.value } };
     },
     execute: async ({ actor, data }) => {
       const tx = await genlayerRelay.updateConstitution(actor, data.orgId, data.newConstitution);

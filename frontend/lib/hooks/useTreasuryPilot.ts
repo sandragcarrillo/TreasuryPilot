@@ -51,7 +51,9 @@ export function useOrg(orgId: number | null) {
     queryKey: ["org", orgId],
     queryFn: () => contract!.getOrg(orgId!),
     enabled: !!contract && orgId !== null,
-    staleTime: 10000,
+    staleTime: 5000,
+    refetchInterval: 8000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -61,7 +63,19 @@ export function useOrgAdmins(orgId: number | null) {
     queryKey: ["orgAdmins", orgId],
     queryFn: () => contract!.getOrgAdmins(orgId!),
     enabled: !!contract && orgId !== null,
-    staleTime: 10000,
+    staleTime: 5000,
+    refetchInterval: 10000,
+  });
+}
+
+export function useProposalTeam(proposalId: number | null) {
+  const contract = useTreasuryContract();
+  return useQuery<string[], Error>({
+    queryKey: ["proposalTeam", proposalId],
+    queryFn: () => contract!.getProposalTeam(proposalId!),
+    enabled: !!contract && proposalId !== null,
+    staleTime: 5000,
+    refetchInterval: 10000,
   });
 }
 
@@ -100,7 +114,9 @@ export function useProposal(proposalId: number | null) {
     queryFn: () => contract!.getProposal(proposalId!),
     enabled: !!contract && proposalId !== null,
     staleTime: 5000,
-    refetchOnWindowFocus: false,
+    // Poll while a tx may be in flight on GenLayer (consensus takes 5–15 min)
+    refetchInterval: 8000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -126,7 +142,8 @@ export function useProgramBudgetStatus(orgId: number | null) {
     queryKey: ["programBudget", orgId],
     queryFn: () => contract!.getProgramBudgetStatus(orgId!),
     enabled: !!contract && orgId !== null,
-    staleTime: 10000,
+    staleTime: 5000,
+    refetchInterval: 8000,
   });
 }
 
@@ -226,6 +243,68 @@ export function useSetAutoApprove() {
     },
     onError: (err: any) => {
       error("Failed to update auto-approval", {
+        description: err?.message || "Please try again.",
+      });
+    },
+  });
+}
+
+export function useSetModificationWindow() {
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      orgId,
+      hours,
+    }: {
+      orgId: number;
+      hours: number;
+    }) => {
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "set-modification-window",
+        address: actor,
+        data: { orgId, hours },
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["org", variables.orgId] });
+      success("Modification window updated");
+    },
+    onError: (err: any) => {
+      error("Failed to update modification window", {
+        description: err?.message || "Please try again.",
+      });
+    },
+  });
+}
+
+export function useSetHistoricalBaseline() {
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      orgId,
+      enabled,
+    }: {
+      orgId: number;
+      enabled: boolean;
+    }) => {
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "set-historical-baseline",
+        address: actor,
+        data: { orgId, enabled },
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["org", variables.orgId] });
+      success("Historical baseline updated");
+    },
+    onError: (err: any) => {
+      error("Failed to update historical baseline", {
         description: err?.message || "Please try again.",
       });
     },
@@ -381,28 +460,155 @@ export function useSubmitProposal() {
   });
 }
 
+export function useUpdateProposal() {
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      proposalId,
+      title,
+      description,
+      requestedAmountUsd,
+      recipient,
+      targetProgram,
+      rationale,
+    }: {
+      proposalId: number;
+      title: string;
+      description: string;
+      requestedAmountUsd: string;
+      recipient: string;
+      targetProgram: string;
+      rationale: string;
+    }) => {
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "update-proposal",
+        address: actor,
+        data: {
+          proposalId,
+          title,
+          description,
+          requestedAmountUsd,
+          recipient,
+          targetProgram,
+          rationale,
+        },
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["proposal", variables.proposalId] });
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["allProposals"] });
+      success("Proposal revised", {
+        description: "Request a new AI evaluation when you're ready.",
+      });
+    },
+    onError: (err: any) => {
+      error("Failed to revise proposal", {
+        description: err?.message || "Please try again.",
+      });
+    },
+  });
+}
+
+export function useAddTeamMember() {
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      proposalId,
+      memberAddress,
+    }: {
+      proposalId: number;
+      memberAddress: string;
+    }) => {
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "add-team-member",
+        address: actor,
+        data: { proposalId, memberAddress: memberAddress as `0x${string}` },
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["proposalTeam", variables.proposalId] });
+      success("Team member added");
+    },
+    onError: (err: any) => {
+      error("Failed to add team member", {
+        description: err?.message || "Please try again.",
+      });
+    },
+  });
+}
+
+export function useRemoveTeamMember() {
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      proposalId,
+      memberAddress,
+    }: {
+      proposalId: number;
+      memberAddress: string;
+    }) => {
+      const actor = requireAddress(address);
+      return relayCall({
+        action: "remove-team-member",
+        address: actor,
+        data: { proposalId, memberAddress: memberAddress as `0x${string}` },
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["proposalTeam", variables.proposalId] });
+      success("Team member removed");
+    },
+    onError: (err: any) => {
+      error("Failed to remove team member", {
+        description: err?.message || "Please try again.",
+      });
+    },
+  });
+}
+
 export function useEvaluateProposal() {
   const { address } = useWallet();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (proposalId: number) => {
+    mutationFn: async (args: { proposalId: number; retryOfTxHash?: string }) => {
       const actor = requireAddress(address);
+      const data: Record<string, unknown> = { proposalId: args.proposalId };
+      if (args.retryOfTxHash) data.retryOfTxHash = args.retryOfTxHash;
       return relayCall({
         action: "evaluate-proposal",
         address: actor,
-        data: { proposalId },
-        paid: true,
+        data,
+        // When retrying an UNDETERMINED tx, the server skips the payment
+        // step. Don't trigger the client-side x402 flow in that case.
+        paid: !args.retryOfTxHash,
+        // Consensus takes 5–15 min — don't block the mutation. The pending
+        // UI handles the wait and surfaces preliminary verdicts on
+        // UNDETERMINED.
+        waitForAccepted: false,
       });
     },
-    onSuccess: (_, proposalId) => {
-      queryClient.invalidateQueries({ queryKey: ["proposal", proposalId] });
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["proposal", vars.proposalId] });
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       queryClient.invalidateQueries({ queryKey: ["allProposals"] });
       queryClient.invalidateQueries({ queryKey: ["programBudget"] });
-      success("Evaluation complete", {
-        description: "AI validators have reached consensus.",
-      });
+      success(
+        vars.retryOfTxHash ? "Retry submitted" : "Evaluation submitted",
+        {
+          description:
+            "AI validators are deliberating. Result will appear once consensus is reached.",
+        }
+      );
     },
     onError: (err: any) => {
       error("Evaluation failed", {
@@ -496,23 +702,33 @@ export function useEvaluateReport() {
     mutationFn: async ({
       proposalId,
       reportNumber,
+      retryOfTxHash,
     }: {
       proposalId: number;
       reportNumber: number;
+      retryOfTxHash?: string;
     }) => {
       const actor = requireAddress(address);
+      const data: Record<string, unknown> = { proposalId, reportNumber };
+      if (retryOfTxHash) data.retryOfTxHash = retryOfTxHash;
       return relayCall({
         action: "evaluate-report",
         address: actor,
-        data: { proposalId, reportNumber },
-        paid: true,
+        data,
+        paid: !retryOfTxHash,
+        // Consensus takes 5–15 min — handled by the pending UI.
+        waitForAccepted: false,
       });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["reports", variables.proposalId] });
-      success("Report evaluation complete", {
-        description: "AI validators have assessed the progress report.",
-      });
+      success(
+        variables.retryOfTxHash ? "Retry submitted" : "Report evaluation submitted",
+        {
+          description:
+            "AI validators are deliberating. Result will appear once consensus is reached.",
+        }
+      );
     },
     onError: (err: any) => {
       error("Report evaluation failed", {

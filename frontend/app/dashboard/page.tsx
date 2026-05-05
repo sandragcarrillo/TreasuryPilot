@@ -1,19 +1,21 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, FileText, ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { VerdictBadge } from "@/components/VerdictBadge";
+import { CreateDAOModal } from "@/components/CreateDAOModal";
 import { useOrgs, useAllProposals } from "@/lib/hooks/useTreasuryPilot";
 import { useWallet } from "@/lib/genlayer/wallet";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { address, isConnected } = useWallet();
-  const { data: allOrgs = [], isLoading: loadingOrgs } = useOrgs();
+  const { data: allOrgs = [], isLoading: loadingOrgs, refetch: refetchOrgs } = useOrgs();
   const { data: allProposals = [], isLoading: loadingProposals } = useAllProposals();
+  const [showCreate, setShowCreate] = useState(false);
 
   const lowerAddress = address?.toLowerCase();
 
@@ -74,7 +76,7 @@ export default function DashboardPage() {
               count={myOrgs.length}
               action={
                 <button
-                  onClick={() => router.push("/")}
+                  onClick={() => setShowCreate(true)}
                   className="text-[11px] font-mono tracking-[0.2em] text-accent hover:text-accent/80 transition-colors"
                 >
                   + Register New
@@ -90,7 +92,7 @@ export default function DashboardPage() {
               <EmptyState
                 headline="Nothing here yet."
                 body="Create your first organization and define how AI evaluates proposals against your mission."
-                cta={{ label: "Register Organization", onClick: () => router.push("/") }}
+                cta={{ label: "Register Organization", onClick: () => setShowCreate(true) }}
               />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -141,7 +143,7 @@ export default function DashboardPage() {
               <EmptyState
                 headline="Still waiting."
                 body="You haven't submitted any proposals yet. Browse organizations and find one that aligns with your work."
-                cta={{ label: "Browse Organizations", onClick: () => router.push("/") }}
+                cta={{ label: "Browse Organizations", onClick: () => router.push("/organizations") }}
               />
             ) : (
               <div className="gov-card overflow-hidden">
@@ -195,6 +197,13 @@ export default function DashboardPage() {
           </section>
         </div>
       </main>
+
+      {showCreate && (
+        <CreateDAOModal
+          onClose={() => setShowCreate(false)}
+          onSuccess={() => refetchOrgs()}
+        />
+      )}
     </div>
   );
 }

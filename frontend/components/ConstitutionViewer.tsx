@@ -26,7 +26,12 @@ type Block =
  */
 function parseConstitution(raw: string): Block[] {
   const blocks: Block[] = [];
-  const lines = raw.split("\n").map((l) => l.trimEnd());
+  // Split inline middle-dot / bullet separators onto their own lines so a
+  // run like "· Item 1 · Item 2 · Item 3" is parsed as a list instead of
+  // one paragraph. We only split when the marker has whitespace on both
+  // sides so we don't touch dots that appear inside words or numbers.
+  const preprocessed = raw.replace(/\s+([·•])\s+/g, "\n$1 ");
+  const lines = preprocessed.split("\n").map((l) => l.trimEnd());
 
   let buf: string[] = [];
   let listBuf: string[] = [];
@@ -55,7 +60,7 @@ function parseConstitution(raw: string): Block[] {
     }
 
     // List item (bullets or numbered)
-    const bulletMatch = line.match(/^(?:[-•]|\d+\.)\s+(.+)$/);
+    const bulletMatch = line.match(/^(?:[-•·]|\d+\.)\s+(.+)$/);
     if (bulletMatch) {
       flushParagraph();
       listBuf.push(bulletMatch[1].trim());

@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface Data {
-  orgId: number;
+  proposalId: number;
   title: string;
   description: string;
   requestedAmountUsd: string;
@@ -23,13 +23,13 @@ interface Data {
 export async function POST(req: Request) {
   return handleRelay<Data, { genlayerTxHash: string }>({
     request: req,
-    action: "submit-proposal",
-    paid: { routeId: "submit-proposal" },
+    action: "update-proposal",
+    paid: false,
     validate: (data) => {
       const obj = requireObject(data);
       if (!obj.ok) return obj;
-      const orgId = requireInt(obj.value.orgId, "orgId", { min: 0, max: 4294967295 });
-      if (!orgId.ok) return orgId;
+      const proposalId = requireInt(obj.value.proposalId, "proposalId", { min: 0, max: 4294967295 });
+      if (!proposalId.ok) return proposalId;
       const title = requireString(obj.value.title, "title", { max: 200 });
       if (!title.ok) return title;
       const description = requireString(obj.value.description, "description", { max: 8192 });
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       return {
         ok: true,
         value: {
-          orgId: orgId.value,
+          proposalId: proposalId.value,
           title: title.value,
           description: description.value,
           requestedAmountUsd: requestedAmountUsd.value,
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       };
     },
     execute: async ({ actor, data }) => {
-      const tx = await genlayerRelay.submitProposal(actor, data);
+      const tx = await genlayerRelay.updateProposal(actor, data);
       return { genlayerTxHash: tx };
     },
   });

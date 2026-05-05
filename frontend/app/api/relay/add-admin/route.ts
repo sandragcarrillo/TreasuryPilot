@@ -1,6 +1,6 @@
 import { handleRelay } from "@/lib/server/relay-handler";
 import { genlayerRelay } from "@/lib/server/genlayer-relay";
-import { isAddress } from "viem";
+import { requireAddress, requireInt, requireObject } from "@/lib/server/validate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,12 +16,13 @@ export async function POST(req: Request) {
     action: "add-admin",
     paid: false,
     validate: (data) => {
-      if (typeof data !== "object" || data === null) return { ok: false, message: "data required" };
-      const d = data as Record<string, unknown>;
-      if (typeof d.orgId !== "number") return { ok: false, message: "orgId (number) required" };
-      if (typeof d.adminAddress !== "string" || !isAddress(d.adminAddress))
-        return { ok: false, message: "adminAddress must be a valid EVM address" };
-      return { ok: true, value: { orgId: d.orgId, adminAddress: d.adminAddress as `0x${string}` } };
+      const obj = requireObject(data);
+      if (!obj.ok) return obj;
+      const orgId = requireInt(obj.value.orgId, "orgId", { min: 0, max: 4294967295 });
+      if (!orgId.ok) return orgId;
+      const adminAddress = requireAddress(obj.value.adminAddress, "adminAddress");
+      if (!adminAddress.ok) return adminAddress;
+      return { ok: true, value: { orgId: orgId.value, adminAddress: adminAddress.value } };
     },
     execute: async ({ actor, data }) => {
       const tx = await genlayerRelay.addAdmin(actor, data.orgId, data.adminAddress);

@@ -2,7 +2,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* TreasuryPilot Design System — Editorial Governance */
+/* Axiom Design System — Editorial Governance */
 :root {
   /* Backgrounds */
   --bg: #0B0D0C;
@@ -285,12 +285,17 @@ main, nav {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Program accent borders — semantic, not arbitrary */
-.council-amber  { border-left: 3px solid var(--warning); }
-.council-blue   { border-left: 3px solid var(--text-dim); }
-.council-teal   { border-left: 3px solid var(--accent); }
-.council-purple { border-left: 3px solid var(--vetoed); }
-.council-slate  { border-left: 3px solid var(--text-faint); }
+/* Program accent borders — full perimeter at 35% so the color is identity, not noise */
+.council-amber  { border-color: color-mix(in srgb, var(--warning) 35%, transparent); }
+.council-blue   { border-color: color-mix(in srgb, var(--text-dim) 35%, transparent); }
+.council-teal   { border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.council-purple { border-color: color-mix(in srgb, var(--vetoed) 35%, transparent); }
+.council-slate  { border-color: color-mix(in srgb, var(--text-faint) 35%, transparent); }
+.gov-card-hover.council-amber:hover  { border-color: color-mix(in srgb, var(--warning) 60%, transparent); }
+.gov-card-hover.council-blue:hover   { border-color: color-mix(in srgb, var(--text-dim) 60%, transparent); }
+.gov-card-hover.council-teal:hover   { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.gov-card-hover.council-purple:hover { border-color: color-mix(in srgb, var(--vetoed) 60%, transparent); }
+.gov-card-hover.council-slate:hover  { border-color: color-mix(in srgb, var(--text-faint) 60%, transparent); }
 
 /* Navbar */
 .gov-navbar {
